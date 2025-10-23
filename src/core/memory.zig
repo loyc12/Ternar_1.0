@@ -1,21 +1,27 @@
 const std = @import( "std" );
 const def = @import( "defs" );
 
-const Trit  = u2;  // 01 = 1, 11 = 0, 10 = -1, 00 = invalid
-const Tryte = u18;
+// =========================== DEFS IMPORTS ===========================
 
-const Bit  = u1;
-const Byte = u8;
+const Bit             = def.Bit;
+const Byte            = def.Byte;
+const BITS_PER_BYTE   = def.BITS_PER_BYTE;
+
+const Trit            = def.Trit;
+const BITS_PER_TRIT   = def.BITS_PER_TRIT;
+
+const Tryte           = def.Tryte;
+const TRITS_PER_TRYTE = def.TRITS_PER_TRYTE;
+
+const BITS_PER_TRYTE  = def.BITS_PER_TRYTE;
+const TRITS_PER_BYTE  = def.TRITS_PER_BYTE;
+
+const tritToChar      = def.tritToChar;
+const tryteToChar     = def.tryteToChar;
 
 
-const BITS_PER_BYTE   = 8;
 
-const BITS_PER_TRIT   = 2; // MUST divide 8 fully
-const TRITS_PER_TRYTE = 9;
-
-const TRITS_PER_BYTE  = BITS_PER_BYTE / BITS_PER_TRIT;
-const BITS_PER_TRYTE  = BITS_PER_TRIT * TRITS_PER_TRYTE;
-
+// =========================== DEFS IMPORTS ===========================
 
 const BANK_TRYTE_SIZE : u64 = std.math.pow( u64, 3, 12 ); // CAREFUL NOT TO OVERDO IT HERE
 const BANK_BYTE_SIZE  : u64 = @divFloor( BITS_PER_TRIT * TRITS_PER_TRYTE * BANK_TRYTE_SIZE, BITS_PER_BYTE ) + 1;
@@ -27,30 +33,6 @@ pub inline fn isTryteIndexValid( index : usize ) bool { return ( index < BANK_TR
 
 pub inline fn isBitIndexValid(   index : usize ) bool { return ( index < BANK_BYTE_SIZE * BITS_PER_BYTE ); }
 pub inline fn isByteIndexValid(  index : usize ) bool { return ( index < BANK_BYTE_SIZE                 ); }
-
-pub inline fn tritToChar( trit : Trit ) u8
-{
-  return switch( trit )
-  {
-    0b01 => '+',
-    0b11 => '0',
-    0b10 => '-',
-    0b00 => '.',
-  };
-}
-
-pub inline fn tryteToChar( tryte : Tryte ) [ TRITS_PER_TRYTE ]u8
-{
-  var i    : u5 = 0;
-  var buff : [ TRITS_PER_TRYTE ]u8 = undefined;
-
-  while( i < TRITS_PER_TRYTE ) : ( i += 1 )
-  {
-    const trit : Trit = @intCast( 0b11 & ( tryte >> ( i * BITS_PER_TRIT )));
-    buff[ TRITS_PER_TRYTE - i - 1 ] = tritToChar( trit ); // fliping the trits so the values are in intuitive order
-  }
-  return buff;
-}
 
 
 
@@ -81,7 +63,7 @@ pub const MemBank = struct
     byte_ptr.* |=  trit_mask;
   }
 
-  // Can and will return any invalid value trit found
+  // Can and will return any invalid trit value encountered
   pub fn getTrit( self : *const MemBank, trit_index : usize ) !Trit
   {
     const bit_index  : u64 = trit_index * BITS_PER_TRIT;
