@@ -3,7 +3,7 @@ const def    = @import( "defs" );
 const stdOut = @import( "./outputer.zig" ).demoStdout;
 
 const TimeVal = def.TimeVal;
-const getNow = def.getNow;
+const getNow  = def.getNow;
 
 // This file defines helper functions to conditionally print debug info based on the following enum's value
 // Yes, this might very well be a shittier version of std.log...

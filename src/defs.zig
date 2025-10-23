@@ -15,8 +15,9 @@ pub fn initAllUtils( allocator : std.mem.Allocator ) void
 {
   //GLOBAL_EPOCH = getNow();
 
-  std.debug.print( "allocator.ptr    = {}\n", .{ allocator.ptr });
-  std.debug.print( "allocater.vtable = {}\n", .{ allocator.vtable });
+  _ = allocator;
+  //std.debug.print( "allocator.ptr    = {}\n", .{ allocator.ptr });
+  //std.debug.print( "allocater.vtable = {}\n", .{ allocator.vtable });
 
   log_u.initFile();
 
@@ -31,8 +32,12 @@ pub fn deinitAllUtils() void
   G_RNG = undefined;
 }
 
+// ================================ CORE SHORTHAND ================================
 
-// ================================ INTERFACER HANDLERS ================================
+pub const mem_c = @import( "core/memory.zig" );
+pub const MemBank = mem_c.MemBank;
+
+// ================================ UTILS SHORTHAND ================================
 
 // ================ LOGGER SHORTHANDS ================
 
