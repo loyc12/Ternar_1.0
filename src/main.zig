@@ -41,6 +41,15 @@ pub fn main() !void
 
   var bank : MemBank = .{};
 
+
+  def.qlog( .INFO, 0, @src(), "# Goodbye, world!" );
+}
+
+
+fn testBank()
+{
+  var bank : MemBank = .{};
+
   bank.logTrit( 19 );
   bank.setTrit( 19, 0b11 ) catch {};
   bank.logTrit( 19 );
@@ -72,7 +81,5 @@ pub fn main() !void
 
   bank.logTrit(  1272138956297856235 );
   bank.logTryte( 1272138956297856235 );
-
-  def.qlog( .INFO, 0, @src(), "# Goodbye, world!" );
 }
 
