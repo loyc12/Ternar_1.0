@@ -44,6 +44,8 @@ pub const MemBank = mem_c.MemBank;
 
 pub const trt_c = @import( "core/tryte.zig" );
 
+// Typedefs
+
 pub const Bit             = trt_c.Bit;
 pub const Byte            = trt_c.Byte;
 pub const BITS_PER_BYTE   = trt_c.BITS_PER_BYTE;
@@ -57,8 +59,35 @@ pub const TRITS_PER_TRYTE = trt_c.TRITS_PER_TRYTE;
 pub const BITS_PER_TRYTE  = trt_c.BITS_PER_TRYTE;
 pub const TRITS_PER_BYTE  = trt_c.TRITS_PER_BYTE;
 
-pub const tritToChar      = trt_c.tritToChar;
-pub const tryteToChar     = trt_c.tryteToChar;
+pub const TritChar        = trt_c.TritChar;
+pub const TryteStr        = trt_c.TryteStr;
+
+
+// Constants
+
+pub const T2 = trt_c.T2;
+pub const T0 = trt_c.T0;
+pub const T1 = trt_c.T1;
+
+pub const tPos   = trt_c.tPos;
+pub const tZero  = trt_c.tZero;
+pub const tNeg   = trt_c.tNeg;
+
+pub const tFalse = trt_c.tFalse;
+pub const tMaybe = trt_c.tMaybe;
+pub const tTrue  = trt_c.tTrue;
+
+
+// Functions
+
+pub const tritToTryte = trt_c.tritToTryte;
+pub const tryteToTrit = trt_c.tryteToTrit;
+
+pub const tritToChar  = trt_c.tritToChar;
+pub const tryteToStr  = trt_c.tryteToStr;
+
+pub const charToTrit  = trt_c.charToTrit;
+pub const strToTryte  = trt_c.strToTryte;
 
 
 // ================================ UTILS SHORTHAND ================================

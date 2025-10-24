@@ -37,49 +37,59 @@ pub fn main() !void
   initCriticals();
   defer deinitCriticals();
 
-  def.qlog( .INFO, 0, @src(), "# Hello, world!" );
+  def.qlog( .INFO, 0, @src(), "# Hello, world!\n" );
 
-  var bank : MemBank = .{};
+  testBank();
 
-
-  def.qlog( .INFO, 0, @src(), "# Goodbye, world!" );
+  def.qlog( .INFO, 0, @src(), "# Goodbye, world...\n" );
 }
 
 
-fn testBank()
+fn testBank() void
 {
   var bank : MemBank = .{};
 
-  bank.logTrit( 19 );
-  bank.setTrit( 19, 0b11 ) catch {};
-  bank.logTrit( 19 );
+  def.qlog( .INFO, 0, @src(), "@ Testing Trits\n" );
 
-  bank.logTrit( 20 );
-  bank.setTrit( 20, 0b01 ) catch {};
-  bank.logTrit( 20 );
+  bank.logTrit( 9, @src() );
+  bank.setTrit( 9, 0b11 ) catch {};
+  bank.logTrit( 9, @src() );
 
-  bank.logTrit( 22 );
-  bank.setTrit( 22, 0b10 ) catch {};
-  bank.logTrit( 22 );
+  bank.logTrit( 10, @src() );
+  bank.setTrit( 10, 0b01 ) catch {};
+  bank.logTrit( 10, @src() );
 
-  bank.logTrit( 25 );
-  bank.setTrit( 25, 0b00 ) catch {};
-  bank.logTrit( 25 );
+  bank.logTrit( 12, @src() );
+  bank.setTrit( 12, 0b10 ) catch {};
+  bank.logTrit( 12, @src() );
 
-  bank.logTryte( 2 );
-  bank.setTryte( 2, 0b11_10_11_11_11_11_10_11_10 ) catch {};
-  bank.logTryte( 2 );
+  bank.logTrit( 15, @src() );
+  bank.setTrit( 15, 0b00 ) catch {};
+  bank.logTrit( 15, @src() );
 
-  bank.setTryte( 2, 0b11_11_01_11_11_01_11_11_01 ) catch {};
-  bank.logTryte( 2 );
+  def.qlog( .INFO, 0, @src(), "@ Testing Trytes\n" );
 
-  bank.setTryte( 2, 0b11_11_10_11_11_11_01_11_11 ) catch {};
-  bank.logTryte( 2 );
+  bank.logTryte( 1, @src() );
+  bank.setTryte( 1, 0b11_10_11_11_11_11_10_11_01 ) catch {};
+  bank.logTryte( 1, @src() );
 
-  bank.setTryte( 2, 0b11_01_11_10_11_11_00_11_00 ) catch {};
-  bank.logTryte( 2 );
+  bank.setTryte( 1, def.strToTryte( "0102201.0".* ) catch 0 ) catch {};
+  bank.logTryte( 1, @src() );
 
-  bank.logTrit(  1272138956297856235 );
-  bank.logTryte( 1272138956297856235 );
+  bank.setTryte( 1, def.strToTryte( "-U1:PZF+.".* ) catch 0 ) catch {};
+  bank.logTryte( 1, @src() );
+
+  bank.setTryte( 1, def.strToTryte( "sdgsfdsff".* ) catch 0 ) catch {};
+  bank.logTryte( 1, @src() );
+
+
+  bank.setTryte( 2, 0b10_11_01_00_00_00 ) catch {};
+  bank.logTryte( 2, @src() );
+
+  //def.qlog( .INFO, 0, @src(), "@ Printing Memory\n" );
+  //for( 0 .. 27 )| i | { bank.logTrit( i, @src() ); }
+
+  bank.logTrit(  1272138956297856235, @src() );
+  bank.logTryte( 1272138956297856235, @src() );
 }
 
