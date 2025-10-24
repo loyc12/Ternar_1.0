@@ -21,15 +21,15 @@ pub const TryteStr = [ TRITS_PER_TRYTE ]u8;
 
 
 pub const T2 = 0b10;
-pub const T0 = 0b11;
+pub const T0 = 0b00;
 pub const T1 = 0b01;
 
 pub const tPos  = 0b01;
-pub const tZero = 0b11;
+pub const tZero = 0b00;
 pub const tNeg  = 0b10;
 
 pub const tFalse = 0b01;
-pub const tMaybe = 0b11;
+pub const tMaybe = 0b00;
 pub const tTrue  = 0b10;
 
 
@@ -43,8 +43,7 @@ pub inline fn tritToTryte( trit : Trit, index : u5 ) Tryte
 
 pub inline fn tryteToTrit( tryte : Tryte, index : u5 ) Trit
 {
-  const invIndex = TRITS_PER_TRYTE - index - 1;
-  return @intCast( 0b11 & ( tryte >> ( invIndex * BITS_PER_TRIT )));
+  return @intCast( 0b11 & ( tryte >> ( index * BITS_PER_TRIT )));
 }
 
 
@@ -55,9 +54,9 @@ pub inline fn tritToChar( trit : Trit ) u8
   return switch( trit )
   {
     0b10 => '2',
-    0b11 => '0',
+    0b00 => '0',
     0b01 => '1',
-    0b00 => '.',
+    0b11 => '.',
   };
 }
 
@@ -66,9 +65,9 @@ pub inline fn charToTrit( c : u8 ) !Trit
   switch( c )
   {
     '-', 'F', '2', 'N' => return 0b10,
-    'M', 'U', '0', 'Z' => return 0b11,
+    'M', 'U', '0', 'Z' => return 0b00,
     '+', 'T', '1', 'P' => return 0b01,
-    '.', '_', ':', 'X' => return 0b00,
+    '.', '_', ':', 'X' => return 0b11,
 
     else =>
     {
@@ -80,16 +79,16 @@ pub inline fn charToTrit( c : u8 ) !Trit
 
 pub inline fn tryteToStr( tryte : Tryte ) TryteStr
 {
-  var i    : u5 = 0;
-  var buff : TryteStr = undefined;
+  var i : u5 = 0;
+  var s : TryteStr = undefined;
 
   while( i < TRITS_PER_TRYTE ) : ( i += 1 )
   {
-    const trit : Trit = tryteToTrit( tryte, i );
+    const trit : Trit = tryteToTrit( tryte, TRITS_PER_TRYTE - i - 1 ); // Big endian
 
-    buff[ i ] = tritToChar( trit );
+    s[ i ] = tritToChar( trit );
   }
-  return buff;
+  return s;
 }
 
 
@@ -101,7 +100,7 @@ pub inline fn strToTryte( s : TryteStr ) !Tryte
   while( i < TRITS_PER_TRYTE ) : ( i += 1 )
   {
     const trit       : Trit  = try charToTrit( s[ i ]);
-    const tryte_mask : Tryte = tritToTryte( trit, i );
+    const tryte_mask : Tryte = tritToTryte( trit, TRITS_PER_TRYTE - i - 1 ); // Big endian
     tryte |= tryte_mask;
   }
   return tryte;

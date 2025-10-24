@@ -52,7 +52,7 @@ fn testBank() void
   def.qlog( .INFO, 0, @src(), "@ Testing Trits\n" );
 
   bank.logTrit( 9, @src() );
-  bank.setTrit( 9, 0b11 ) catch {};
+  bank.setTrit( 9, 0b00 ) catch {};
   bank.logTrit( 9, @src() );
 
   bank.logTrit( 10, @src() );
@@ -64,13 +64,13 @@ fn testBank() void
   bank.logTrit( 12, @src() );
 
   bank.logTrit( 15, @src() );
-  bank.setTrit( 15, 0b00 ) catch {};
+  bank.setTrit( 15, 0b11 ) catch {};
   bank.logTrit( 15, @src() );
 
   def.qlog( .INFO, 0, @src(), "@ Testing Trytes\n" );
 
   bank.logTryte( 1, @src() );
-  bank.setTryte( 1, 0b11_10_11_11_11_11_10_11_01 ) catch {};
+  bank.setTryte( 1, 0b00_10_00_00_11_00_10_00_01 ) catch {};
   bank.logTryte( 1, @src() );
 
   bank.setTryte( 1, def.strToTryte( "0102201.0".* ) catch 0 ) catch {};
@@ -83,11 +83,11 @@ fn testBank() void
   bank.logTryte( 1, @src() );
 
 
-  bank.setTryte( 2, 0b10_11_01_00_00_00 ) catch {};
+  bank.setTryte( 2, 0b10_00_01_11_00_00 ) catch {};
   bank.logTryte( 2, @src() );
 
-  //def.qlog( .INFO, 0, @src(), "@ Printing Memory\n" );
-  //for( 0 .. 27 )| i | { bank.logTrit( i, @src() ); }
+  def.qlog( .INFO, 0, @src(), "@ Printing Memory\n" );
+  for( 0 .. 27 )| i | { bank.logTrit( i, @src() ); }
 
   bank.logTrit(  1272138956297856235, @src() );
   bank.logTryte( 1272138956297856235, @src() );
