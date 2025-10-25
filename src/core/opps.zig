@@ -61,14 +61,14 @@ pub const e_oper = enum( u18 )
 //WAI   = 0bXX_XX_XX_XX_XX_XX_XX_10_XX, // suspend process after op. ( wait )
 
   // INPUT SPACE |
-  IPUM  = 0b00_XX_XX_XX_XX_XX_XX_XX_XX, // PUM adresses
-  IRAM  = 0b01_XX_XX_XX_XX_XX_XX_XX_XX, // RAM adresses
-  IREL  = 0b10_XX_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( process adr. relative )
+  IPM   = 0b00_XX_XX_XX_XX_XX_XX_XX_XX, // PUM adresses
+  IRM   = 0b01_XX_XX_XX_XX_XX_XX_XX_XX, // RAM adresses
+  IRL   = 0b10_XX_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( process adr. relative )
 
   // OUTPUT SPACE | always outputs to process reg. as well
-  OPUM  = 0bXX_XX_XX_XX_XX_XX_XX_XX_00, // PUM adresses
-  ORAM  = 0bXX_XX_XX_XX_XX_XX_XX_XX_01, // RAM adresses
-  OREL  = 0bXX_XX_XX_XX_XX_XX_XX_XX_10, // RAM adresses ( process adr. relative )
+  OPM   = 0bXX_XX_XX_XX_XX_XX_XX_XX_00, // PUM adresses
+  ORM   = 0bXX_XX_XX_XX_XX_XX_XX_XX_01, // RAM adresses
+  ORL   = 0bXX_XX_XX_XX_XX_XX_XX_XX_10, // RAM adresses ( process adr. relative )
 
   // EXECUTION CONDITION | only execute opcode if ...
   ALW   = 0bXX_XX_XX_XX_XX_00_00_XX_XX, // ...always, unconditionally
