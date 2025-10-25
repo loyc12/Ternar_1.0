@@ -121,7 +121,7 @@ pub const e_oper = enum( u18 )
 //XXX   = 0bXX_00_10_10_10_XX_XX_XX_XX,
 
 
-  // TRIT OPS | 3T | on place operations
+  // TRIT OPS | 3T | in place operations
   INC   = 0bXX_01_00_00_00_XX_XX_XX_XX, // increment adr1.val, *adr2.val
   DEC   = 0bXX_01_00_00_01_XX_XX_XX_XX, // decrement adr1.val, *adr2.val
   INV   = 0bXX_01_00_00_10_XX_XX_XX_XX, // invert    adr1.val, *adr2.val
@@ -158,7 +158,7 @@ pub const e_oper = enum( u18 )
 //XXX   = 0bXX_01_10_10_01_XX_XX_XX_XX,
 //XXX   = 0bXX_01_10_10_10_XX_XX_XX_XX,
 
-  // MATH OPS | 4T
+  // ALU OPS | 4T
   ADD   = 0bXX_10_00_00_00_XX_XX_XX_XX, // addition  adr2.val to   adr1.val, then outputs to adr3
   SUB   = 0bXX_10_00_00_01_XX_XX_XX_XX, // substract adr2.val from adr1.val, then outputs to adr3
   MUL   = 0bXX_10_00_00_10_XX_XX_XX_XX, // multiply  adr2.val with adr1.val, then outputs to adr3
@@ -178,19 +178,19 @@ pub const e_oper = enum( u18 )
 //XXX   = 0bXX_10_01_01_00_XX_XX_XX_XX,
 //XXX   = 0bXX_10_01_01_01_XX_XX_XX_XX,
 //XXX   = 0bXX_10_01_01_10_XX_XX_XX_XX,
-//
+
 //XXX   = 0bXX_10_01_10_00_XX_XX_XX_XX,
 //XXX   = 0bXX_10_01_10_01_XX_XX_XX_XX,
 //XXX   = 0bXX_10_01_10_10_XX_XX_XX_XX,
-//
+
 //XXX   = 0bXX_10_10_00_00_XX_XX_XX_XX,
 //XXX   = 0bXX_10_10_00_01_XX_XX_XX_XX,
 //XXX   = 0bXX_10_10_00_10_XX_XX_XX_XX,
-//
+
 //XXX   = 0bXX_10_10_01_00_XX_XX_XX_XX,
 //XXX   = 0bXX_10_10_01_01_XX_XX_XX_XX,
 //XXX   = 0bXX_10_10_01_10_XX_XX_XX_XX,
-//
+
 //XXX   = 0bXX_10_10_10_00_XX_XX_XX_XX,
 //XXX   = 0bXX_10_10_10_01_XX_XX_XX_XX,
 //XXX   = 0bXX_10_10_10_10_XX_XX_XX_XX,
