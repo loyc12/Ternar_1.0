@@ -5,6 +5,7 @@ const def = @import( "defs" );
 
 // SIGN  | what the last ALU/CMP opp returned              ( -/0/+ )
 // CARRY | wether the last ALU opp had a carry             (  -/+  )
+// BORROW| wether the last ALU opp had a borrow            (  -/+  )
 // FLOW  | wether the last ALU opp under- or over-flowed   (  -/+  )
 
 // STATE | if the process is stopping, running or resuming ( -/0/+ )
@@ -13,8 +14,6 @@ const def = @import( "defs" );
 
 // LEN   | lenght of the current operation                 ( -/0/+ ) 1, 2 or 3 args passed
 // ERR   | execution status of the last operation          ( -/0/+ ) failed, unknown, succeeded
-// TBA   |
-
 
 
 // =========================== MEMORY LAYOUT ===========================
@@ -56,10 +55,10 @@ pub const e_oper = enum( u18 )
   //        |  |     |     |     |  |
   //      0bFF_XX-XX_XX-XX_FF-FF_FF_FF,
 
-  // SPECIAL OPERATIONS | // TODO : expand these
+  // SPECIAL OPERATIONS | // TODO : expand these for interupts
   NOP   = 0bXX_00_00_00_00_XX_XX_XX_XX, // do nothing                ( skip )
   SUS   = 0bXX_XX_XX_XX_XX_XX_XX_01_XX, // close process after op.   ( exit )
-  WAI   = 0bXX_XX_XX_XX_XX_XX_XX_10_XX, // suspend process after op. ( wait )
+//WAI   = 0bXX_XX_XX_XX_XX_XX_XX_10_XX, // suspend process after op. ( wait )
 
   // INPUT SPACE |
   IPUM  = 0b00_XX_XX_XX_XX_XX_XX_XX_XX, // PUM adresses
@@ -71,7 +70,7 @@ pub const e_oper = enum( u18 )
   ORAM  = 0bXX_XX_XX_XX_XX_XX_XX_XX_01, // RAM adresses
   OREL  = 0bXX_XX_XX_XX_XX_XX_XX_XX_10, // RAM adresses ( process adr. relative )
 
-  // EXECUTION CONDITION | only execute op. if ...
+  // EXECUTION CONDITION | only execute opcode if ...
   ALW   = 0bXX_XX_XX_XX_XX_00_00_XX_XX, // ...always, unconditionally
   IFC   = 0bXX_XX_XX_XX_XX_00_01_XX_XX, // ...if carry flag != 0
   IFF   = 0bXX_XX_XX_XX_XX_00_10_XX_XX, // ...if flow flag != 0
@@ -84,22 +83,23 @@ pub const e_oper = enum( u18 )
   INP   = 0bXX_XX_XX_XX_XX_10_01_XX_XX, // ...if sign flag != +
   INN   = 0bXX_XX_XX_XX_XX_10_10_XX_XX, // ...if sign flag != -
 
-  // OPERATION TYPE & CODE
-  // PROCESS ADR. OPS | 2T | set the process address's value to ...
-  JMP   = 0bXX_00_00_01_00_XX_XX_XX_XX, // > adr1.val
-  CAL   = 0bXX_00_00_01_01_XX_XX_XX_XX, // > adr1.val after pushing current proc. adr. on stack ( psh + jmp )
-  RET   = 0bXX_00_00_01_10_XX_XX_XX_XX, // > latest stacked value, popping it out of the stack  ( pop + jmp )
+  // ========= OPERATION TYPE & CODE =========
+
+  // PROCESS ADR. OPS | 2T ( 1 arg )
+  JMP   = 0bXX_00_00_01_00_XX_XX_XX_XX, // > set the process address to adr1.val
+  CAL   = 0bXX_00_00_01_01_XX_XX_XX_XX, // > PSH( proc. adr. ) + JMP( a1 )
+  RET   = 0bXX_00_00_01_10_XX_XX_XX_XX, // > JMP( POP() )                              NOTE : adr1 ignored
 
 //XXX   = 0bXX_00_00_10_00_XX_XX_XX_XX,
 //XXX   = 0bXX_00_00_10_01_XX_XX_XX_XX,
 //XXX   = 0bXX_00_00_10_10_XX_XX_XX_XX,
 
-  // PROCESS STACK OPS | 2T
+  // PROCESS STACK OPS | 2T ( 1 arg )
   PSH   = 0bXX_00_01_00_00_XX_XX_XX_XX, // pushes adr1.val into the process stack
   POP   = 0bXX_00_01_00_01_XX_XX_XX_XX, // pops from the process stack into adr1
-  CLR   = 0bXX_00_01_00_10_XX_XX_XX_XX, // empties the process stack ( adr1 ignored )
+  CLR   = 0bXX_00_01_00_10_XX_XX_XX_XX, // empties the process stack                  NOTE : adr1 ignored
 
-  SPS   = 0bXX_00_01_01_00_XX_XX_XX_XX, // sets the process stack's adr. to adr1.val
+  SPA   = 0bXX_00_01_01_00_XX_XX_XX_XX, // sets the process stack's adr. to adr1.val
 //XXX   = 0bXX_00_01_01_01_XX_XX_XX_XX,
 //XXX   = 0bXX_00_01_01_10_XX_XX_XX_XX,
 
@@ -107,10 +107,10 @@ pub const e_oper = enum( u18 )
 //XXX   = 0bXX_00_01_10_01_XX_XX_XX_XX,
 //XXX   = 0bXX_00_01_10_10_XX_XX_XX_XX,
 
-  // MOVE OPS | 3T
+  // MOVE OPS | 3T ( 2 args )
   MOV   = 0bXX_00_10_00_00_XX_XX_XX_XX, // copies adr1.val to adr2
   SWP   = 0bXX_00_10_00_01_XX_XX_XX_XX, // swaps vals betwix adr1 and adr2
-//XXX   = 0bXX_00_10_00_10_XX_XX_XX_XX,
+//INF   = 0bXX_00_10_00_10_XX_XX_XX_XX, // writes device info to adr1, *adr2
 
   STR   = 0bXX_00_10_01_01_XX_XX_XX_XX, // writes process reg. val to adr1, *adr2
   LOD   = 0bXX_00_10_01_00_XX_XX_XX_XX, // reads adr1.val into process reg, *adr2
@@ -121,7 +121,7 @@ pub const e_oper = enum( u18 )
 //XXX   = 0bXX_00_10_10_10_XX_XX_XX_XX,
 
 
-  // TRIT OPS | 3T | in place operations
+  // TRIT OPS | 3T ( 2 args ) | in place operations
   INC   = 0bXX_01_00_00_00_XX_XX_XX_XX, // increment adr1.val, *adr2.val
   DEC   = 0bXX_01_00_00_01_XX_XX_XX_XX, // decrement adr1.val, *adr2.val
   INV   = 0bXX_01_00_00_10_XX_XX_XX_XX, // invert    adr1.val, *adr2.val
@@ -134,17 +134,17 @@ pub const e_oper = enum( u18 )
   RTD   = 0bXX_01_00_10_01_XX_XX_XX_XX, // rotate all trits down by one in adr1, *adr2.val
   RTV   = 0bXX_01_00_10_10_XX_XX_XX_XX, // rotate all trits by adr1.val in adr2
 
-//XXX   = 0bXX_01_01_00_00_XX_XX_XX_XX,
+  FLP   = 0bXX_01_01_00_00_XX_XX_XX_XX, // flip the trits around inside the trite ( 100 -> 001 )
   PAB   = 0bXX_01_01_00_01_XX_XX_XX_XX, // positive absolute of adr1.val, *adr2.val ( calls INV if need be )
   NAB   = 0bXX_01_01_00_10_XX_XX_XX_XX, // negative absolute of adr1.val, *adr2.val ( calls INV if need be )
 
-//XXX   = 0bXX_01_01_01_00_XX_XX_XX_XX,
-//XXX   = 0bXX_01_01_01_01_XX_XX_XX_XX,
-//XXX   = 0bXX_01_01_01_10_XX_XX_XX_XX,
+  AND   = 0bXX_01_01_01_00_XX_XX_XX_XX, // ( stores result in adr1 )
+  OR    = 0bXX_01_01_01_01_XX_XX_XX_XX, // ( stores result in adr1 )
+  XOR   = 0bXX_01_01_01_10_XX_XX_XX_XX, // ( stores result in adr1 )
 
-//XXX   = 0bXX_01_01_10_00_XX_XX_XX_XX,
-//XXX   = 0bXX_01_01_10_01_XX_XX_XX_XX,
-//XXX   = 0bXX_01_01_10_10_XX_XX_XX_XX,
+  NAN   = 0bXX_01_01_10_00_XX_XX_XX_XX, // ( stores result in adr1 )
+  NOR   = 0bXX_01_01_10_01_XX_XX_XX_XX, // ( stores result in adr1 )
+  XNR   = 0bXX_01_01_10_10_XX_XX_XX_XX, // ( stores result in adr1 )
 
 //XXX   = 0bXX_01_10_00_00_XX_XX_XX_XX,
 //XXX   = 0bXX_01_10_00_01_XX_XX_XX_XX,
@@ -158,7 +158,7 @@ pub const e_oper = enum( u18 )
 //XXX   = 0bXX_01_10_10_01_XX_XX_XX_XX,
 //XXX   = 0bXX_01_10_10_10_XX_XX_XX_XX,
 
-  // ALU OPS | 4T
+  // ALU OPS | 4T ( 3 args )
   ADD   = 0bXX_10_00_00_00_XX_XX_XX_XX, // addition  adr2.val to   adr1.val, then outputs to adr3
   SUB   = 0bXX_10_00_00_01_XX_XX_XX_XX, // substract adr2.val from adr1.val, then outputs to adr3
   MUL   = 0bXX_10_00_00_10_XX_XX_XX_XX, // multiply  adr2.val with adr1.val, then outputs to adr3
@@ -175,9 +175,9 @@ pub const e_oper = enum( u18 )
   MIN   = 0bXX_10_01_00_01_XX_XX_XX_XX, // finds the minimum betwix adr1.val, adr2.val, then outputs to adr3
   MED   = 0bXX_10_01_00_10_XX_XX_XX_XX, // finds the median  betwix adr1.val, adr2.val, adr3.val ( only outputs to proc. reg. )
 
-//XXX   = 0bXX_10_01_01_00_XX_XX_XX_XX,
-//XXX   = 0bXX_10_01_01_01_XX_XX_XX_XX,
-//XXX   = 0bXX_10_01_01_10_XX_XX_XX_XX,
+  ADC   = 0bXX_10_01_01_00_XX_XX_XX_XX, // ADD( a1 + a2, + carry trit )
+  SBB   = 0bXX_10_01_01_01_XX_XX_XX_XX, // SUB( a1 - a2, - FLP( borrow trit )
+  MAD   = 0bXX_10_01_01_10_XX_XX_XX_XX, // ADD( MUL( a1, a2 ), a3 )
 
 //XXX   = 0bXX_10_01_10_00_XX_XX_XX_XX,
 //XXX   = 0bXX_10_01_10_01_XX_XX_XX_XX,
