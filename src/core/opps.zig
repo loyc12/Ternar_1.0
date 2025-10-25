@@ -91,8 +91,8 @@ pub const e_oper = enum( u18 )
   RET   = 0bXX_00_00_01_10_XX_XX_XX_XX, // > JMP( POP() )                              NOTE : adr1 ignored
 
 //XXX   = 0bXX_00_00_10_00_XX_XX_XX_XX,
-//XXX   = 0bXX_00_00_10_01_XX_XX_XX_XX,
-//XXX   = 0bXX_00_00_10_10_XX_XX_XX_XX,
+//XXX   = 0bXX_00_00_10_01_XX_XX_XX_XX, // ICAL
+//XXX   = 0bXX_00_00_10_10_XX_XX_XX_XX, // IRET
 
   // PROCESS STACK OPS | 2T ( 1 arg )
   PSH   = 0bXX_00_01_00_00_XX_XX_XX_XX, // pushes adr1.val into the process stack
@@ -138,21 +138,22 @@ pub const e_oper = enum( u18 )
   PAB   = 0bXX_01_01_00_01_XX_XX_XX_XX, // positive absolute of adr1.val, *adr2.val ( calls INV if need be )
   NAB   = 0bXX_01_01_00_10_XX_XX_XX_XX, // negative absolute of adr1.val, *adr2.val ( calls INV if need be )
 
-  AND   = 0bXX_01_01_01_00_XX_XX_XX_XX, // ( stores result in adr1 )
-  OR    = 0bXX_01_01_01_01_XX_XX_XX_XX, // ( stores result in adr1 )
-  XOR   = 0bXX_01_01_01_10_XX_XX_XX_XX, // ( stores result in adr1 )
+  // the following ops override adr1 and not // TODO : revise organisation ( 4T for output arg ? )
+  AND   = 0bXX_01_01_01_00_XX_XX_XX_XX,
+  ORR   = 0bXX_01_01_01_01_XX_XX_XX_XX,
+  XOR   = 0bXX_01_01_01_10_XX_XX_XX_XX,
 
-  NAN   = 0bXX_01_01_10_00_XX_XX_XX_XX, // ( stores result in adr1 )
-  NOR   = 0bXX_01_01_10_01_XX_XX_XX_XX, // ( stores result in adr1 )
-  XNR   = 0bXX_01_01_10_10_XX_XX_XX_XX, // ( stores result in adr1 )
+  NAN   = 0bXX_01_01_10_00_XX_XX_XX_XX,
+  NOR   = 0bXX_01_01_10_01_XX_XX_XX_XX,
+  XNR   = 0bXX_01_01_10_10_XX_XX_XX_XX,
 
-//XXX   = 0bXX_01_10_00_00_XX_XX_XX_XX,
-//XXX   = 0bXX_01_10_00_01_XX_XX_XX_XX,
-//XXX   = 0bXX_01_10_00_10_XX_XX_XX_XX,
+  CON   = 0bXX_01_10_00_00_XX_XX_XX_XX, // 1/2 => 1, else 2                   ( determinacy ) ( unary )
+  DET   = 0bXX_01_10_00_01_XX_XX_XX_XX, // 1 +   1 => 1, 2 +   2 => 2, else 0 ( consensus )
+  MAJ   = 0bXX_01_10_00_10_XX_XX_XX_XX, // 1 + 0/1 => 1, 2 + 0/2 => 2, else 0 ( majority )
 
-//XXX   = 0bXX_01_10_01_00_XX_XX_XX_XX,
-//XXX   = 0bXX_01_10_01_01_XX_XX_XX_XX,
-//XXX   = 0bXX_01_10_01_10_XX_XX_XX_XX,
+  NDT   = 0bXX_01_10_01_00_XX_XX_XX_XX, // 1/2 => 2, else 1                   ( determinacy ) ( unary )
+  NCN   = 0bXX_01_10_01_01_XX_XX_XX_XX, // 1 + 1 =>   2, 2 +   2 => 1, else 0 ( consensus )
+  NMJ   = 0bXX_01_10_01_10_XX_XX_XX_XX, // 1 + 0/1 => 2, 2 + 0/2 => 1, else 0 ( majority )
 
 //XXX   = 0bXX_01_10_10_00_XX_XX_XX_XX,
 //XXX   = 0bXX_01_10_10_01_XX_XX_XX_XX,
