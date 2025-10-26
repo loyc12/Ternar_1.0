@@ -1,207 +1,248 @@
 const std = @import( "std" );
 const def = @import( "defs" );
 
-// =========================== PROCESS FLAGS ===========================
+// =========================== PROCESS FLAGS ( PFLG ) ===========================
 
-// F_SN => what the last ALU/CMP opp returned            ( -/0/+ ) sign flag
-// F_CR => if the last ALU opp had a carry               (  -/+  ) carry flag
-// F_BR => if the last ALU opp had a borrow              (  -/+  ) borrow flag
-// F_FL => if the last ALU opp under- or over-flowed     (  -/+  ) over/under flow flag
+// F_SN => what the last ALU/CMP opp returned          ( -/0/+ ) sign flag
+// F_CR => if the last ALU opp had a carry             (  -/+  ) carry flag           ( add )
+// F_BR => if the last ALU opp had a borrow            (  -/+  ) borrow flag          ( sub )
+// F_FL => if the last ALU opp under- or over-flowed   (  -/+  ) over/under flow flag ( add, sub. mul )
 
-// F_ST => if the process is quiting, running or pausing ( -/0/+ ) process state flag
-// F_ER => wether the last op failed or succeeded        (  -/+  ) oper. error flag
+// F_ER => wether the last op failed or succeeded      (  -/+  ) operation error flag
 
-// F_IS => when to auto-inter. ( always, never, on jmp ) ( -/0/+ ) inter. step step flag
-// F_IP => when to allow non-auto interrupts ( idem )    ( -/0/+ ) inter. perm. flag
-// F_?? => ? ( maybe interupt stuff )
+// F_IS => when to auto-inter. ( on step, never, on jmp )       ( -/0/+ ) interupt-on-step flag
+// F_ST => if the process is quiting, running or pausing        ( -/0/+ ) process state flag   TODO : check if useless ?
+// F_IP => if the process can inter. itself( via SYS, no, yes ) ( -/0/+ ) interupt permissions
+// F_?? => ?                                              NOTE : maybe interupt stuff
 
 
-// =========================== MEMORY LAYOUT ===========================
-
-// ========= PUM =========
+// =========================== PUM MEMORY LAYOUT ===========================
 // processing units memory : 19_683 Trytes
 
-// 0   POUT => process reg.    : 1  Tryte | default process work & output register
-// 1   PADR => process adr.    : 1  Tryte | where the process pointer is currently at
-// 2   PFLG => process flags   : 1  Tryte | ( see above for list )
-// 3   PSTK => process stack   : 1  Tryte | adr. to top of currently used call stack ( delimited by null )
-// 4   PSTP => step counter    : 1  Tryte | how many steps since process launche
-// 5   ???? => ? ( maybe interupt stuff )
-// 6   ???? => ? ( maybe interupt stuff )
-// 7   RSEC => RAM sector reg. : 1  Tryte | upper half of any RAM adressing
-// 8.1 OLEN => cur. op. lenght : 3  Trits | number of args the current ops has
-// 8.2 ???? => TBA             : 3  Trits | ?
-// 8.3 ???? => TBA             : 3  Trits | ?
+// NOTE : CONTEXT = PPR + PCR
 
-// 9-26     => CPU fast  regs. : 18 Trytes
-// 27-?     => CPU cache regs. : ?  Trytes
+// ========= PPR : process registers =========
 
-// ?-?      => I/O mapping reg.
-// ?-?      => video memory    : 2x max resolution            move to RAM ?
-// ?-?      => audio memory    : 1 sec of soundwaves          move to RAM ?
-// ?-?      => boot protocol   : what to do on cold start     move to RAM ?
-// ?-end    => adr. stack(s)   : size = max recursivity       move to RAM ?
+//     Tryte #
+//        |
+// PREG | 0 => process reg.    :  default process work register NOTE : add more work regs ?
+// PADR | 1 => process adr.    :  where the process pointer is currently at
+// PFLG | 2 => process flags   :  ( see above for list )
+// PSTK | 3 => process stack   :  adr. to top of currently used call stack ( delimited by nulls )
+// RSEG | 4 => RAM segment     :  upper half of any RAM adressing ( page / sector HADR )
+// ???? | 5 => ?               :
+// ???? | 6 => ?               :
+// PSTP | 7 => step counter    :  how many steps since process launched
+// OLEN | 8 => cur. op. lenght :  number of args the current ops has
 
-// ========= RAM =========
-// random access memory
+// ========= PCR : cache registers =========
 
-// 0-end => general memory : 387_420_489 ( 19_683^2 ) Trytes
-// NOTE : when addressing, uses the RSEC as the address' uper half ( lower half is arg )
+// 9-81 => CPU work regs.  : 72 Trytes
+
+// ========= PAR : auxiliary registers =========
+
+// 81-?  => CPU cache regs.
+
+// ?-?   => boot   protocol : what to do on computer open
+// ?-?   => close  protocol : what to do on computer close
+
+// ?-?   => launch protocol : what to do on program start
+// ?-?   => pause  protocol : what to do on program pause    ( interupt context switching )
+// ?-?   => resume protocol : what to do on program resumes  ( interupt context switching )
+// ?-?   => exit   protocol : what to do on program stop
+
+// ?-?   => I/O mapping reg.
+
+// NOTE : potential prots
+// SYS_RSTRT ( restart computer )
+// SYS_SLEEP ( yield for X cycles )
+// SYS_IO    ( perform I/O on device )
+// SYS_LOAD  ( load another process into RAM )
+// SYS_FORK  ( duplicate current context )
+// SYS_ALLOC ( memory allocation )
+// SYS_GET   ( ead system flag )
+
+// ========= PSR : stack registers =========
+
+// ?-end => process stack(s) : size = 9 * MAX_RECURSIVITY ( stores full PPR context )
+
+// =========================== RAM MEMORY LAYOUT ===========================
+// random access memory : 387_420_489 ( 19_683^2 ) Trytes
+
+// NOTE : when addressing, uses the RSEG as the address' uper half ( lower half is arg )
+
+// 0-? => general memory
+// ?-? => audio   memory   : 1 sec of soundwaves
+// ?-? => video   memory   : 2x max resolution
 
 
 // =========================== OPCODES ===========================
-// NOTE : *arg means optional address/arg
+
+// ========= NOMENCLATURE =========
+// A, B, C : arg1/2/3
+// *arg    : optional arg ( can be zero and wont do anything  )
+// .val    : value at arg address
+// .adr    : arg as an adfress
+// .stk    : entire stack at adfress
 
 pub const e_oper = enum( u18 ) // represents t9 Tryte
 {
   // OPERATION SUBMASKS
-  _IAS_ = 0b11_00_00_00_00_00_00_00_00, // input  adr. space
-  _OAS_ = 0b00_11_00_00_00_00_00_00_00, // output adr. space
-  _OTC_ = 0b00_00_11_11_11_11_00_00_00, // oper. type + code
-  _OPT_ = 0b00_00_11_11_00_00_00_00_00, // oper. type
-  _OPC_ = 0b00_00_00_00_11_11_00_00_00, // oper. code
-  _SPC_ = 0b00_00_00_00_00_00_11_00_00, // proc. flow ops
-  _EXC_ = 0b00_00_00_00_00_00_00_11_11, // exec. condition
+  _IAS_ = 0b11_00_00_00_00_00_00_00_00, // input  adress space
+  _OAS_ = 0b00_11_00_00_00_00_00_00_00, // output adress space
+  _PFT_ = 0b00_00_11_00_00_00_00_00_00, // flow tags ( interupts and such )
+  _OPN_ = 0b00_00_00_11_11_11_11_00_00, // operation names ( types & codes )
+  _OPT_ = 0b00_00_00_11_11_00_00_00_00, // operation types
+  _OPC_ = 0b00_00_00_00_00_11_11_00_00, // operation codes
+  _EXC_ = 0b00_00_00_00_00_00_00_11_11, // execution conditions
 
 
-  // INPUT SPACE |
-  IPM   = 0b00_XX_XX_XX_XX_XX_XX_XX_XX, // PUM adresses
-  IRM   = 0b01_XX_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( upper half in RAM sector reg. )
-  IRL   = 0b10_XX_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( relative to proc. adr, signed )
+  // INPUT SPACE                      | // adr. 0 is null
+  I_PM  = 0b00_XX_XX_XX_XX_XX_XX_XX_XX, // PUM adresses
+  I_RM  = 0b01_XX_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( upper half in RSEG )
+  I_RL  = 0b10_XX_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( relative to PADR, signed )
 
-  // OUTPUT SPACE | always outputs to process reg. as well
-  OPM   = 0bXX_00_XX_XX_XX_XX_XX_XX_XX, // PUM adresses
-  ORM   = 0bXX_01_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( upper half in RAM sector reg. )
-  ORL   = 0bXX_10_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( relative to proc. adr, signed )
+  // OUTPUT SPACE                     | always outputs to PREG. as well
+  O_PM  = 0bXX_00_XX_XX_XX_XX_XX_XX_XX, // PUM adresses
+  O_RM  = 0bXX_01_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( upper half in RSEG )
+  O_RL  = 0bXX_10_XX_XX_XX_XX_XX_XX_XX, // RAM adresses ( relative to PADR, signed )
 
-  // NOTE : RES being the default state ops also means any jump/call needs to set adr. to the Tryte BEFORE the intended target, although cassembler could remove that quirk automatically for non-min adr.
-  // PROCESS STATE OPS | ?T ( ? arg ) | take effect after op is run, only if cond. fulfilled
-  RES   = 0bXX_XX_XX_XX_XX_XX_00_XX_XX, // resume process   ( skip ) => sets STATE flag to 0 and increments process adr. by OLEN + 1
-  SUS   = 0bXX_XX_XX_XX_XX_XX_01_XX_XX, // suspend process  ( exit ) => sets STATE flag to +
-  INT   = 0bXX_XX_XX_XX_XX_XX_10_XX_XX, // interupt process ( wait ) => sets STATE flag to -
+  // NOTE : RES being the default state ops also means any jump/call needs to set adr. to the Tryte BEFORE
+  //  V     the intended target, although assembly could remove that quirk automatically for non-min adr.
 
-  // EXECUTION CONDITION | only execute opcode if ...
-  ALW   = 0bXX_XX_XX_XX_XX_XX_XX_00_00, // ...always, unconditionally
-  IFC   = 0bXX_XX_XX_XX_XX_XX_XX_00_01, // ...if CARRY or BORROW flag != 0
-  IFF   = 0bXX_XX_XX_XX_XX_XX_XX_00_10, // ...if FLOW flag != 0
+  // PROCESS FLOW TAGS                | take effect after op is run, only if cond. was fulfilled
+  CNT   = 0bXX_XX_00_XX_XX_XX_XX_XX_XX, // step / resume process  ( continue  ) => sets F_ST to 0 and increments PREG.val by OLEN + 1
+  TRM   = 0bXX_XX_01_XX_XX_XX_XX_XX_XX, // suspend / quit process ( terminate ) => sets F_ST to + and calls exit protocol  if F_IP allows
+  YLD   = 0bXX_XX_10_XX_XX_XX_XX_XX_XX, // interupt process       ( yield     ) => sets F_ST to - and calls pause protocol if F_IP allows
 
-  IFZ   = 0bXX_XX_XX_XX_XX_XX_XX_01_00, // ...if SIGN flag == 0
-  IFP   = 0bXX_XX_XX_XX_XX_XX_XX_01_01, // ...if SIGN flag == +
-  IFN   = 0bXX_XX_XX_XX_XX_XX_XX_01_10, // ...if SIGN flag == -
+  // OPERATION CONDITIONS             | only execute opcode if :
+  ALW   = 0bXX_XX_XX_XX_XX_XX_XX_00_00, // always, unconditionally
+  IFC   = 0bXX_XX_XX_XX_XX_XX_XX_00_01, // if F_CR or F_BR != 0
+  IFF   = 0bXX_XX_XX_XX_XX_XX_XX_00_10, // if F_FL != 0
 
-  INZ   = 0bXX_XX_XX_XX_XX_XX_XX_10_00, // ...if SIGN flag != 0 // change for better flags ?
-  INP   = 0bXX_XX_XX_XX_XX_XX_XX_10_01, // ...if SIGN flag != + // change for better flags ?
-  INN   = 0bXX_XX_XX_XX_XX_XX_XX_10_10, // ...if SIGN flag != - // change for better flags ?
+  IFZ   = 0bXX_XX_XX_XX_XX_XX_XX_01_00, // if F_SN == 0
+  IFP   = 0bXX_XX_XX_XX_XX_XX_XX_01_01, // if F_SN == +
+  IFN   = 0bXX_XX_XX_XX_XX_XX_XX_01_10, // if F_SN == -
+
+  IAZ   = 0bXX_XX_XX_XX_XX_XX_XX_10_00, // if A.val == 0     TODO change for better conditions ?
+  IAP   = 0bXX_XX_XX_XX_XX_XX_XX_10_01, // if A.val >  0     TODO change for better conditions ?
+  IAN   = 0bXX_XX_XX_XX_XX_XX_XX_10_10, // if A.val <  0     TODO change for better conditions ?
+
 
   // ========= OPERATION TYPE & CODE =========
 
-  // PROCESS OPS | 2T ( 1 arg )
-  JMP   = 0bXX_XX_00_00_01_00_XX_XX_XX, // set the process address to adr1.val
-  CAL   = 0bXX_XX_00_00_01_01_XX_XX_XX, // PSH( proc. adr. ) + JMP( a1 )
-  RET   = 0bXX_XX_00_00_01_10_XX_XX_XX, // JMP( POP() )                            NOTE : adr1 ignored
+  // PROCESS OPS         2T ( 1 arg ) |
+  NOP   = 0bXX_XX_XX_00_00_00_00_XX_XX, // do nothing, A.val times ( NOOP * A )
+  SAV   = 0bXX_XX_XX_00_00_00_01_XX_XX, // save    CONTEXT to   A.adr ( first 81 Trytes of PUM )
+  RST   = 0bXX_XX_XX_00_00_00_10_XX_XX, // restore CONTEXT from A.adr ( first 81 Trytes of PUM )
 
-  PSH   = 0bXX_XX_00_00_10_00_XX_XX_XX, // pushes adr1.val into the process stack
-  POP   = 0bXX_XX_00_00_10_01_XX_XX_XX, // pops from the process stack into adr1
-  CLR   = 0bXX_XX_00_00_10_10_XX_XX_XX, // empties the process stack               NOTE : adr1 ignored
+  SFL   = 0bXX_XX_XX_00_00_01_00_XX_XX, // sets PFLG.val to A.val
+  GFL   = 0bXX_XX_XX_00_00_01_01_XX_XX, // sets A.val to PFLG.val
+//XXX   = 0bXX_XX_XX_00_00_01_10_XX_XX, // NOTE : needs arbitrary stack manips
 
-  SPA   = 0bXX_XX_00_01_00_00_XX_XX_XX, // sets the process stack adr. to adr1.val
-  SRA   = 0bXX_XX_00_01_00_01_XX_XX_XX, // sets the process stack adr. to adr1.val
-//XXX   = 0bXX_XX_00_01_00_10_XX_XX_XX, // sets the RAM sector address to adr1.val ( upper half of RAM I/O address space )
+  INF   = 0bXX_XX_XX_00_00_10_00_XX_XX, // writes device info to A.adr
+  SYS   = 0bXX_XX_XX_00_00_10_01_XX_XX, // sets F_ST to - and calls protocol # A.val if it exists, and F_IP allows
+//XXX   = 0bXX_XX_XX_00_00_10_10_XX_XX, // NOTE : needs arbitrary stack manips
 
-//XXX   = 0bXX_XX_00_01_01_00_XX_XX_XX,
-//XXX   = 0bXX_XX_00_01_01_01_XX_XX_XX,
-//XXX   = 0bXX_XX_00_01_01_10_XX_XX_XX,
+// FLOW OPS              2T ( 1 arg ) |
+  PSH   = 0bXX_XX_XX_00_01_00_00_XX_XX, // pushes A.val into PSTK.stk
+  POP   = 0bXX_XX_XX_00_01_00_01_XX_XX, // pops from PSTK.stk into A.adr
+  CLR   = 0bXX_XX_XX_00_01_00_10_XX_XX, // empties the PSTK.stk          ( + SSA( A )? )
 
-  // MOVE OPS | 3T ( 2 args )
-  MOV   = 0bXX_XX_00_01_10_00_XX_XX_XX, // copies adr1.val to adr2
-  SWP   = 0bXX_XX_00_01_10_01_XX_XX_XX, // swaps vals betwix adr1 and adr2
-  INF   = 0bXX_XX_00_01_10_10_XX_XX_XX, // writes device info to adr1, *adr2
+  JMP   = 0bXX_XX_XX_00_01_01_00_XX_XX, // set PADR to A.val
+  CAL   = 0bXX_XX_XX_00_01_01_01_XX_XX, // PSH( PADR.val ) + JMP( A.val )
+  RET   = 0bXX_XX_XX_00_01_01_10_XX_XX, // JMP( POP().val )              ( + SSA( A )? )
 
-  STR   = 0bXX_XX_00_10_00_00_XX_XX_XX, // writes process reg. val to adr1, *adr2
-  LOD   = 0bXX_XX_00_10_00_01_XX_XX_XX, // reads adr1.val into process reg, *adr2
-  STL   = 0bXX_XX_00_10_00_10_XX_XX_XX, // writes process reg. val to adr1 THEN eads adr1.val into process reg. ( STR + LOD )
+  SSA   = 0bXX_XX_XX_00_01_10_00_XX_XX, // sets PSTK.val to A.val
+  SRA   = 0bXX_XX_XX_00_01_10_01_XX_XX, // sets RSEG.val to A.val ( upper half of RAM I/O address space )
+//XXX   = 0bXX_XX_XX_00_01_10_10_XX_XX,
 
-//XXX   = 0bXX_XX_00_10_01_01_XX_XX_XX,
-//XXX   = 0bXX_XX_00_10_01_00_XX_XX_XX,
-//XXX   = 0bXX_XX_00_10_01_10_XX_XX_XX,
+  // MOVE OPS           3T ( 2 args ) | in place ops
+  SET   = 0bXX_XX_XX_00_10_00_00_XX_XX, // copies VAL into B.adr
+  CPY   = 0bXX_XX_XX_00_10_00_01_XX_XX, // copies A.val to B.adr
+  SWP   = 0bXX_XX_XX_00_10_00_10_XX_XX, // swaps A.val and B.val
 
-//XXX   = 0bXX_XX_00_10_10_00_XX_XX_XX,
-//XXX   = 0bXX_XX_00_10_10_01_XX_XX_XX,
-//XXX   = 0bXX_XX_00_10_10_10_XX_XX_XX,
+  STR   = 0bXX_XX_XX_00_10_01_01_XX_XX, // writes PREG.val to  A.adr, *B.adr
+  LOD   = 0bXX_XX_XX_00_10_01_00_XX_XX, // reads A.val into PREG.adr, *B.adr
+  STL   = 0bXX_XX_XX_00_10_01_10_XX_XX, // STR( A ) + LOD( B )
 
+  //                    4T ( 3 args ) |
+  STM   = 0bXX_XX_XX_00_10_10_00_XX_XX, // SET( VAL, B++ ) C.val times
+  CPM   = 0bXX_XX_XX_00_10_10_01_XX_XX, // CPY( A++, B++ ) C.val times
+  SWM   = 0bXX_XX_XX_00_10_10_10_XX_XX, // SWP( A++, B++ ) C.val times
 
-  // TRIT1 OPS | 4T ( 3 args )        | in place ops. ( unless specified otherwise )
-  INC   = 0bXX_XX_01_00_00_00_XX_XX_XX, // increment adr1.val, *adr2.val, *adr3.val
-  DEC   = 0bXX_XX_01_00_00_01_XX_XX_XX, // decrement adr1.val, *adr2.val, *adr3.val
-  INV   = 0bXX_XX_01_00_00_10_XX_XX_XX, // invert    adr1.val, *adr2.val, *adr3.val
+  // TRIT1 OPS          4T ( 3 args ) | in place ops.
+  INC   = 0bXX_XX_XX_01_00_00_00_XX_XX, // increment     A.val, *B.val, *C.val
+  DEC   = 0bXX_XX_XX_01_00_00_01_XX_XX, // decrement     A.val, *B.val, *C.val
+  NEG   = 0bXX_XX_XX_01_00_00_10_XX_XX, // negate/invert A.val, *B.val, *C.val
 
-  SHU   = 0bXX_XX_01_00_01_00_XX_XX_XX, // shift all trits up   by one in adr1.val, *adr2.val, *adr3.val
-  SHD   = 0bXX_XX_01_00_01_01_XX_XX_XX, // shift all trits down by one in adr1.val, *adr2.val, *adr3.val
-  SHV   = 0bXX_XX_01_00_01_10_XX_XX_XX, // shift all trits by adr1.val in adr2.val, *adr3.val
+  SHU   = 0bXX_XX_XX_01_00_01_00_XX_XX, // shift all trits up   by one in A.val, *B.val, *C.val
+  SHD   = 0bXX_XX_XX_01_00_01_01_XX_XX, // shift all trits down by one in A.val, *B.val, *C.val
+  SHV   = 0bXX_XX_XX_01_00_01_10_XX_XX, // shift all trits by A.val    in B.val, *C.val
 
-  RTU   = 0bXX_XX_01_00_10_00_XX_XX_XX, // rotate all trits up   by one in adr1.val, *adr2.val, *adr3.val
-  RTD   = 0bXX_XX_01_00_10_01_XX_XX_XX, // rotate all trits down by one in adr1.val, *adr2.val, *adr3.val
-  RTV   = 0bXX_XX_01_00_10_10_XX_XX_XX, // rotate all trits by adr1.val in adr2.val, *adr3.val
+  RTU   = 0bXX_XX_XX_01_00_10_00_XX_XX, // rotate all trits up   by one in A.val, *B.val, *C.val
+  RTD   = 0bXX_XX_XX_01_00_10_01_XX_XX, // rotate all trits down by one in A.val, *B.val, *C.val
+  RTV   = 0bXX_XX_XX_01_00_10_10_XX_XX, // rotate all trits by A.val    in B.val, *C.val
 
-  FLP   = 0bXX_XX_01_01_00_00_XX_XX_XX, // flip the trits back-to-front for adr1.val, *adr2.val, *adr3.val
-  PAB   = 0bXX_XX_01_01_00_01_XX_XX_XX, // finds the positive absolutes for adr1.val, *adr2.val, *adr3.val ( via INV call )
-  NAB   = 0bXX_XX_01_01_00_10_XX_XX_XX, // finds the negative absolutes for adr1.val, *adr2.val, *adr3.val ( via INV call )
+  FLP   = 0bXX_XX_XX_01_01_00_00_XX_XX, // flip all trits back-to-front for A.val, *B.val, *C.val
+  PAB   = 0bXX_XX_XX_01_01_00_01_XX_XX, // finds the positive absolutes for A.val, *B.val, *C.val ( via NEG call ) NOTE could be done with opconds ?
+  NAB   = 0bXX_XX_XX_01_01_00_10_XX_XX, // finds the negative absolutes for A.val, *B.val, *C.val ( via NEG call ) NOTE could be done with opconds ?
 
-  // TRIT2 OPS | 4T ( 3 args )        | outputs to adr3.val ( unless specified otherwise )
-  AND   = 0bXX_XX_01_01_01_00_XX_XX_XX,
-  ORR   = 0bXX_XX_01_01_01_01_XX_XX_XX,
-  XOR   = 0bXX_XX_01_01_01_10_XX_XX_XX,
+  MAG   = 0bXX_XX_XX_01_01_01_00_XX_XX, // finds the lenght of A.val, *B.val, *c.val in trits ( negative if MST is negative )
+  DET   = 0bXX_XX_XX_01_01_01_01_XX_XX, // 1/2 => 1, else 2 | determinacy
+  NDT   = 0bXX_XX_XX_01_01_01_10_XX_XX, // 1/2 => 2, else 1 | inv determinacy
 
-  NAN   = 0bXX_XX_01_01_10_00_XX_XX_XX,
-  NOR   = 0bXX_XX_01_01_10_01_XX_XX_XX,
-  XNR   = 0bXX_XX_01_01_10_10_XX_XX_XX,
+//XXX   = 0bXX_XX_XX_01_01_10_00_XX_XX,
+//XXX   = 0bXX_XX_XX_01_01_10_01_XX_XX,
+//XXX   = 0bXX_XX_XX_01_01_10_10_XX_XX,
 
-  CON   = 0bXX_XX_01_10_00_00_XX_XX_XX, // 1/2 => 1, else 2                   | determinacy     TODO : move to unary trit ops
-  DET   = 0bXX_XX_01_10_00_01_XX_XX_XX, // 1 +   1 => 1, 2 +   2 => 2, else 0 | consensus
-  MAJ   = 0bXX_XX_01_10_00_10_XX_XX_XX, // 1 + 0/1 => 1, 2 + 0/2 => 2, else 0 | majority
+  // TRIT2 OPS          4T ( 3 args ) | outputs to C.adr
+  AND   = 0bXX_XX_XX_01_10_00_00_XX_XX,
+  ORR   = 0bXX_XX_XX_01_10_00_01_XX_XX,
+  XOR   = 0bXX_XX_XX_01_10_00_10_XX_XX,
 
-  NDT   = 0bXX_XX_01_10_01_00_XX_XX_XX, // 1/2 => 2, else 1                   | inv determinacy TODO : move to unary trit ops
-  NCN   = 0bXX_XX_01_10_01_01_XX_XX_XX, // 1 + 1 =>   2, 2 +   2 => 1, else 0 | inv consensus
-  NMJ   = 0bXX_XX_01_10_01_10_XX_XX_XX, // 1 + 0/1 => 2, 2 + 0/2 => 1, else 0 | inv majority
+  NAN   = 0bXX_XX_XX_01_10_01_00_XX_XX,
+  NOR   = 0bXX_XX_XX_01_10_01_01_XX_XX,
+  XNR   = 0bXX_XX_XX_01_10_01_10_XX_XX,
 
-  MSK   = 0bXX_XX_01_10_10_00_XX_XX_XX, // 1 + 1/2 => 1/2, 2 + 1/2 => 2/1, else 0 ( mask & invmask ) NOTE : adr1 is masker, adr2 is maskee
-//XXX   = 0bXX_XX_01_10_10_01_XX_XX_XX,
-//XXX   = 0bXX_XX_01_10_10_10_XX_XX_XX,
+  MSK   = 0bXX_XX_XX_01_10_10_00_XX_XX, // 1 + 1/2 => 1/2, 2 + 1/2 => 2/1, else 0 | masking    NOTE : A is masker, B is maskee
+  CON   = 0bXX_XX_XX_01_10_10_01_XX_XX, // 1 +   1 => 1,   2 +   2 => 2,   else 0 | consensus
+  MAJ   = 0bXX_XX_XX_01_10_10_10_XX_XX, // 1 + 0/1 => 1,   2 + 0/2 => 2,   else 0 | majority
 
-  // ALU OPS | 4T ( 3 args )          | outputs to adr3.val ( unless specified otherwise )
-  ADD   = 0bXX_XX_10_00_00_00_XX_XX_XX, // addition  adr2.val to   adr1.val
-  SUB   = 0bXX_XX_10_00_00_01_XX_XX_XX, // substract adr2.val from adr1.val
-  MUL   = 0bXX_XX_10_00_00_10_XX_XX_XX, // multiply  adr2.val with adr1.val
+  CMP   = 0bXX_XX_XX_10_00_00_00_XX_XX, // A.val >/=/< B.val, updating PFLGs
+//CMV   = 0bXX_XX_XX_10_00_00_01_XX_XX, // A.val >/=/< VAL, updating PFLGs
+//XXX   = 0bXX_XX_XX_10_00_00_10_XX_XX,
 
-  MOD   = 0bXX_XX_10_00_01_00_XX_XX_XX, // modulo adr1.val by adr2.val
-  DIV   = 0bXX_XX_10_00_01_01_XX_XX_XX, // divide adr1.val by adr2.val                           NOTE : rounded towards 0
-  RND   = 0bXX_XX_10_00_01_10_XX_XX_XX, // round  adr1.val by adr2.val                           NOTE : rounded towards 0
+//XXX   = 0bXX_XX_XX_10_00_01_00_XX_XX,
+  NCN   = 0bXX_XX_XX_10_00_01_01_XX_XX, // 1 + 1 =>   2, 2 +   2 => 1, else 0     | inv consensus
+  NMJ   = 0bXX_XX_XX_10_00_01_10_XX_XX, // 1 + 0/1 => 2, 2 + 0/2 => 1, else 0     | inv majority
 
-  EXP   = 0bXX_XX_10_00_10_00_XX_XX_XX, // finds the adr1.val exponent or adr2.val
-  ROT   = 0bXX_XX_10_00_10_01_XX_XX_XX, // finds the adr1.val root or adr2.val                   NOTE : rounded towards 0
-  CMP   = 0bXX_XX_10_00_10_10_XX_XX_XX, // compares  adr1.val to adr2.val, setting the relevant process flag // TODO : move to binary trit ops ?
+//XXX   = 0bXX_XX_XX_10_00_10_00_XX_XX,
+//XXX   = 0bXX_XX_XX_10_00_10_01_XX_XX,
+//XXX   = 0bXX_XX_XX_10_00_10_10_XX_XX,
 
-  MAX   = 0bXX_XX_10_01_00_00_XX_XX_XX, // finds the maximum betwix adr1.val, adr2.val
-  MIN   = 0bXX_XX_10_01_00_01_XX_XX_XX, // finds the minimum betwix adr1.val, adr2.val
-  MED   = 0bXX_XX_10_01_00_10_XX_XX_XX, // finds the median  betwix adr1.val, adr2.val, adr3.val NOTE : only outputs to proc. reg.
+  // ALU OPS            4T ( 3 args ) | outputs to C.adr ( except for MED and MAD )
+  ADD   = 0bXX_XX_XX_10_01_00_00_XX_XX, // addition  B.val to   A.val
+  SUB   = 0bXX_XX_XX_10_01_00_01_XX_XX, // substract B.val from A.val
+  MUL   = 0bXX_XX_XX_10_01_00_10_XX_XX, // multiply  B.val with A.val
 
-  ADC   = 0bXX_XX_10_01_01_00_XX_XX_XX, // ADD( a1 + a2, + CARRY trit )
-  SBB   = 0bXX_XX_10_01_01_01_XX_XX_XX, // SUB( a1 - a2, - FLP( BORROW trit )
-  MAD   = 0bXX_XX_10_01_01_10_XX_XX_XX, // ADD( MUL( a1, a2 ), a3 )                              NOTE : only outputs to proc. reg.
+  MOD   = 0bXX_XX_XX_10_01_01_00_XX_XX, // modulo A.val by B.val
+  EXP   = 0bXX_XX_XX_10_01_01_00_XX_XX, // A.val ^ B.val
+  LOG   = 0bXX_XX_XX_10_01_01_10_XX_XX, // LOG( A.val ) / LOG ( B.val )  NOTE : logB( A )
 
-//XXX   = 0bXX_XX_10_01_10_00_XX_XX_XX,
-//XXX   = 0bXX_XX_10_01_10_01_XX_XX_XX,
-//XXX   = 0bXX_XX_10_01_10_10_XX_XX_XX,
+  DIV   = 0bXX_XX_XX_10_01_10_01_XX_XX, // divide A.val by B.val         NOTE : rounds towards 0
+  RND   = 0bXX_XX_XX_10_01_10_10_XX_XX, // round  A.val by B.val         NOTE : rounds towards 0
+  RUT   = 0bXX_XX_XX_10_01_10_01_XX_XX, // A.val ^ ( 1 / B.val )         NOTE : rounds towards 0
 
-//XXX   = 0bXX_XX_10_10_00_00_XX_XX_XX,
-//XXX   = 0bXX_XX_10_10_00_01_XX_XX_XX,
-//XXX   = 0bXX_XX_10_10_00_10_XX_XX_XX,
+  MAX   = 0bXX_XX_XX_10_10_00_00_XX_XX, // MAX( A.val, B.val )
+  MIN   = 0bXX_XX_XX_10_10_00_01_XX_XX, // MIN( A.val, B.val )
+  MED   = 0bXX_XX_XX_10_10_00_10_XX_XX, // MED( A.val, B.val, C.val )    NOTE : only outputs to PREG
 
-//XXX   = 0bXX_XX_10_10_01_00_XX_XX_XX,
-//XXX   = 0bXX_XX_10_10_01_01_XX_XX_XX,
-//XXX   = 0bXX_XX_10_10_01_10_XX_XX_XX,
+  ADC   = 0bXX_XX_XX_10_10_01_00_XX_XX, // ( A.val + B.val ) + CARRY trit
+  SBB   = 0bXX_XX_XX_10_10_01_01_XX_XX, // ( A.val - B.val ) - FLP( BORROW trit
+  MAD   = 0bXX_XX_XX_10_10_01_10_XX_XX, // ( A.val * B.val ) + C.val )   NOTE : only outputs to PREG
 
-//XXX   = 0bXX_XX_10_10_10_00_XX_XX_XX,
-//XXX   = 0bXX_XX_10_10_10_01_XX_XX_XX,
-//XXX   = 0bXX_XX_10_10_10_10_XX_XX_XX,
+  SQR   = 0bXX_XX_XX_10_10_10_00_XX_XX, // ( A.val + *B.val ) ^ 2        NOTE : is this useful ?
+  CUB   = 0bXX_XX_XX_10_10_10_01_XX_XX, // ( A.val + *B.val ) ^ 3        NOTE : is this useful ?
+  MDT   = 0bXX_XX_XX_10_10_10_10_XX_XX, // ( A.val + *B.val ) % 3        NOTE : is this useful ?
 };
