@@ -3,13 +3,13 @@ const def = @import( "defs" );
 
 // =========================== PROCESS FLAGS ( PFLG ) ===========================
 
-// F_SN => what the last ALU/CMP opp returned        ( -/0/+ ) sign flag
-// F_CR => if the last ALU opp had a carry           (  -/+  ) carry flag           ( add )
-// F_BR => if the last ALU opp had a borrow          (  -/+  ) borrow flag          ( sub )
-// F_FL => if the last ALU opp under- or over-flowed (  -/+  ) over/under flow flag ( add, sub. mul )
+// F_SN => what the last ALU/CMP op returned                      ( -/0/+ ) sign flag
+// F_CR => if the last ALU op had a carry                         (  -/+  ) carry flag           ( add )
+// F_BR => if the last ALU op had a borrow                        (  -/+  ) borrow flag          ( sub )
+// F_FL => if the last ALU op under- or over-flowed               (  -/+  ) over/under flow flag ( add, sub. mul )
 
-// F_ER => wether the last op failed, skipped or succeeded        ( -/0/+ ) operation error flag
-// F_CN => wether to modify the next opcond ( inv, skip )         (  -/+  ) operation condition flag
+// F_OR => wether the last opcond was false, skipped or true      ( -/0/+ ) opcond result flag
+// F_OM => how to modify the next opcond ( inv, skip )            (  -/+  ) opcond modifier flag
 
 // F_IS => when to auto-inter. ( on step, never, on jmp )         ( -/0/+ ) interupt-on-step flag
 // F_ST => if the process is quiting, running or pausing          ( -/0/+ ) process state flag   TODO : check if useless ?
@@ -80,6 +80,7 @@ const def = @import( "defs" );
 
 // ========= NOMENCLATURE =========
 // A, B, C : arg1/2/3
+//  arg    : mandatory arg
 // *arg    : optional arg ( can be zero and wont do anything  )
 // .adr    : arg as an adfress
 // .var    : value at arg's address
@@ -104,14 +105,14 @@ pub const e_oper = enum( u18 ) // represents t9 Tryte
   _EXC_ = 0b00_00_00_00_00_00_00_11_11, // execution conditions
 
   // INPUT SPACE                      | // adr. 0 is null
-  I_PM  = 0b00_00_00_00_00_00_00_00_00, // PUM adresses                  // TODO : replace with "use static values instead of pointers to variables" ?
-  I_RM  = 0b01_00_00_00_00_00_00_00_00, // RAM adresses ( upper half in RSEG )
-  I_RL  = 0b10_00_00_00_00_00_00_00_00, // RAM adresses ( relative to PADR, signed )
+  I_VL  = 0b00_00_00_00_00_00_00_00_00, // raw values   ( in-place ops stored in prog. as static val. )
+  I_AD  = 0b01_00_00_00_00_00_00_00_00, // RAM adresses ( upper half of the address in RSEG )
+  I_RA  = 0b10_00_00_00_00_00_00_00_00, // RAM adresses ( relative to current PADR.val, signed )
 
   // OUTPUT SPACE                     | always outputs to PREG. as well
-  O_PM  = 0b00_00_00_00_00_00_00_00_00, // PUM adresses
-  O_RM  = 0b00_01_00_00_00_00_00_00_00, // RAM adresses ( upper half in RSEG )
-  O_RL  = 0b00_10_00_00_00_00_00_00_00, // RAM adresses ( relative to PADR, signed )
+  O_VL  = 0b00_00_00_00_00_00_00_00_00, // raw values   ( in-place ops stored in prog. as static val. )
+  O_AD  = 0b00_01_00_00_00_00_00_00_00, // RAM adresses ( upper half of the address in RSEG )
+  O_RA  = 0b00_10_00_00_00_00_00_00_00, // RAM adresses ( relative to current PADR.val, signed )
 
   // OPERATION CONDITIONS             | only execute opcode if :
   C_ALW = 0b00_00_00_00_00_00_00_00_00, // always, unconditionally
@@ -122,8 +123,8 @@ pub const e_oper = enum( u18 ) // represents t9 Tryte
   C_IFP = 0b00_00_00_00_00_00_00_01_01, // if F_SN != +
   C_IFN = 0b00_00_00_00_00_00_00_01_10, // if F_SN != -
 
-//C_INV = 0b00_00_00_00_00_00_00_10_00, // set F_SK to - to invert the next condition check's result
-//C_SKP = 0b00_00_00_00_00_00_00_10_01, // set F_SK to + to avoid the next condition check ( acts like C_ALW  )
+  C_INV = 0b00_00_00_00_00_00_00_10_00, // set F_SK to - to invert the next condition check's result
+  C_SKP = 0b00_00_00_00_00_00_00_10_01, // set F_SK to + to avoid the next condition check ( acts like C_ALW  )
 //C_XXX = 0b00_00_00_00_00_00_00_10_10,
 
 
