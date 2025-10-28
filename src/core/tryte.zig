@@ -28,9 +28,9 @@ pub const tPos  = 0b01;
 pub const tZero = 0b00;
 pub const tNeg  = 0b10;
 
-pub const tFalse = 0b01;
+pub const tTrue  = 0b01;
 pub const tMaybe = 0b00;
-pub const tTrue  = 0b10;
+pub const tFalse = 0b10;
 
 
 // =========================== TRIT-TRYTE CONVERSION ===========================
@@ -64,9 +64,9 @@ pub inline fn charToTrit( c : u8 ) !Trit
 {
   switch( c )
   {
-    '-', 'F', '2', 'N' => return 0b10,
-    'M', 'U', '0', 'Z' => return 0b00,
     '+', 'T', '1', 'P' => return 0b01,
+    'M', 'U', '0', 'Z' => return 0b00,
+    '-', 'F', '2', 'N' => return 0b10,
     '.', '_', ':', 'X' => return 0b11,
 
     else =>

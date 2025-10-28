@@ -17,7 +17,7 @@ const def = @import( "defs" );
 
 
 // =========================== PUM MEMORY LAYOUT ===========================
-// processing units memory : 19_683 Trytes
+// processing unit memory ( page 0 ) : 19_683 Trytes
 
 // NOTE : CONTEXT = PPR + PCR
 
@@ -43,15 +43,16 @@ const def = @import( "defs" );
 
 // 81-?  => CPU cache regs.
 
+// ?-?   => I/O mapping reg.
+
 // ?-?   => boot   protocol : what to do on computer open
 // ?-?   => close  protocol : what to do on computer close
 
 // ?-?   => launch protocol : what to do on program start
-// ?-?   => pause  protocol : what to do on program pause    ( interupt context switching )
-// ?-?   => resume protocol : what to do on program resumes  ( interupt context switching )
 // ?-?   => exit   protocol : what to do on program stop
 
-// ?-?   => I/O mapping reg.
+// ?-?   => resume protocol : what to do on program resumes  ( interupt context switching )
+// ?-?   => pause  protocol : what to do on program pause    ( interupt context switching )
 
 // NOTE : potential protocols
 // SYS_RSTRT ( restart computer )
@@ -94,7 +95,7 @@ const def = @import( "defs" );
 //  A0 t t t
 //  A+ t t t
 
-pub const e_oper = enum( u18 ) // represents t9 Tryte
+pub const e_OpCode = enum( u18 ) // represents t9 Tryte
 {
   // OPERATION SUBMASKS
   _IAS_ = 0b11_00_00_00_00_00_00_00_00, // input  adress space
@@ -198,14 +199,14 @@ pub const e_oper = enum( u18 ) // represents t9 Tryte
 //XXX   = 0b00_00_00_01_01_10_01_00_00,
 //XXX   = 0b00_00_00_01_01_10_10_00_00,
 
-  // stack ops           2T ( 1 arg ) |
-  PSH   = 0b00_00_00_01_10_00_00_00_00, // ...
-  POP   = 0b00_00_00_01_10_00_01_00_00, // ...
-  CLR   = 0b00_00_00_01_10_00_10_00_00, // ...
+  // process stack ops   2T ( 1 arg ) |
+  PSS   = 0b00_00_00_01_10_00_00_00_00, // pushes A.var into PSTK.stk
+  PPS   = 0b00_00_00_01_10_00_01_00_00, // pops from PSTK.stk into A.adr
+  CLS   = 0b00_00_00_01_10_00_10_00_00, // empties the PSTK.stk          ( + SSA( A )? )
 
-  PSS   = 0b00_00_00_01_10_01_00_00_00, // pushes A.var into PSTK.stk
-  PPS   = 0b00_00_00_01_10_01_01_00_00, // pops from PSTK.stk into A.adr
-  CLS   = 0b00_00_00_01_10_01_10_00_00, // empties the PSTK.stk          ( + SSA( A )? )
+//XXX   = 0b00_00_00_01_10_01_00_00_00,
+//XXX   = 0b00_00_00_01_10_01_01_00_00,
+//XXX   = 0b00_00_00_01_10_01_10_00_00,
 
 //XXX   = 0b00_00_00_01_10_10_00_00_00,
 //XXX   = 0b00_00_00_01_10_10_01_00_00,
@@ -213,7 +214,7 @@ pub const e_oper = enum( u18 ) // represents t9 Tryte
 
   // MOVE OPS           3T ( 2 args ) | in place ops
 
-  SET   = 0b00_00_00_10_00_00_00_00_00, // copies A.VAL into B.adr
+//XXX   = 0b00_00_00_10_00_00_00_00_00,
   CPY   = 0b00_00_00_10_00_00_01_00_00, // copies A.var to B.adr
   SWP   = 0b00_00_00_10_00_00_10_00_00, // swaps A.var and B.var
 
@@ -243,9 +244,9 @@ pub const e_oper = enum( u18 ) // represents t9 Tryte
   CPM   = 0b00_00_00_10_10_00_01_00_00, // CPY( A++, B++ ) C.var times
   SWM   = 0b00_00_00_10_10_00_10_00_00, // SWP( A++, B++ ) C.var times
 
-//XXX   = 0b00_00_00_10_10_01_00_00_00,
-//XXX   = 0b00_00_00_10_10_01_01_00_00,
-//XXX   = 0b00_00_00_10_10_01_10_00_00,
+  PSH   = 0b00_00_00_10_10_01_00_00_00, // ...
+  POP   = 0b00_00_00_10_10_01_01_00_00, // ...
+  CLR   = 0b00_00_00_10_10_01_10_00_00, // ...
 
 //XXX   = 0b00_00_00_10_10_10_00_00_00,
 //XXX   = 0b00_00_00_10_10_10_01_00_00,
@@ -267,25 +268,25 @@ pub const e_oper = enum( u18 ) // represents t9 Tryte
 
 
   FLP   = 0b00_00_01_00_01_00_00_00_00, // flip all trits back-to-front for A.var, *B.var, *C.var
-  POS   = 0b00_00_01_00_01_00_01_00_00, // converts all 2 trits to 0
-  NEG   = 0b00_00_01_00_01_00_10_00_00, // converts all 1 trits to 0
+  PTZ   = 0b00_00_01_00_01_00_01_00_00, // converts all 1 trits to 0
+  NTZ   = 0b00_00_01_00_01_00_10_00_00, // converts all 2 trits to 0
 
   MAG   = 0b00_00_01_00_01_01_00_00_00, // set A.var, *B.var, *C.var to the sum of their individual trits
-  CLP   = 0b00_00_01_00_01_01_01_00_00, // clamp all 2 trits to 1
-  CLN   = 0b00_00_01_00_01_01_10_00_00, // clamp all 1 trits to 2
+  PTN   = 0b00_00_01_00_01_01_01_00_00, // clamp all 1 trits to 2
+  NTP   = 0b00_00_01_00_01_01_10_00_00, // clamp all 2 trits to 1
 
-//XXX   = 0b00_00_01_00_01_10_00_00_00,
-  TRU   = 0b00_00_01_00_01_10_01_00_00, // convert all individual trip up   ( 2 > 0 > 1 > 2)
-  TRD   = 0b00_00_01_00_01_10_10_00_00, // convert all individual trip down ( 1 > 0 > 2 > 1)
+  EQZ   = 0b00_00_01_00_01_10_00_00_00, // 0 => 1, 1/2 => - | is null
+  ZTP   = 0b00_00_01_00_01_10_01_00_00, // converts all 0 trits to 1
+  ZTN   = 0b00_00_01_00_01_10_10_00_00, // converts all 0 trits to 2
 
 
-  EQZ   = 0b00_00_01_00_10_00_00_00_00, // 0 => 1, 1/2 => - | is null
-  DET   = 0b00_00_01_00_10_00_01_00_00, // 1/2 => 1, 0 => 2 | determinacy
-  IDT   = 0b00_00_01_00_10_00_10_00_00, // 1/2 => 2, 0 => 1 | inv determinacy
+//XXX   = 0b00_00_01_00_10_00_00_00_00,
+  TUP   = 0b00_00_01_00_10_00_01_00_00, // convert all individual trits up   by 1 ( 2 > 0 > 1 > 2 )
+  TDW   = 0b00_00_01_00_10_00_10_00_00, // convert all individual trits down by 1 ( 1 > 0 > 2 > 1 )
 
 //XXX   = 0b00_00_01_00_10_01_00_00_00,
-//XXX   = 0b00_00_01_00_10_01_01_00_00,
-//XXX   = 0b00_00_01_00_10_01_10_00_00,
+  DET   = 0b00_00_01_00_10_01_01_00_00, // 1/2 => 1, 0 => 2 | determinacy
+  IDT   = 0b00_00_01_00_10_01_10_00_00, // 1/2 => 2, 0 => 1 | inv determinacy
 
   CMZ   = 0b00_00_01_00_10_10_00_00_00, // A.var >/=/< 0, updating PFLGs
 //XXX   = 0b00_00_01_00_10_10_01_00_00,
@@ -293,9 +294,9 @@ pub const e_oper = enum( u18 ) // represents t9 Tryte
 
   // TRIT2 OPS          4T ( 3 args ) | outputs to C.adr
 
-  CMV   = 0b00_00_01_01_00_00_00_00_00, // A.var >/=/<  B.VAL, updating PFLGs
-  CMP   = 0b00_00_01_01_00_00_01_00_00, // A.var >/=/<  B.var, updating PFLGs
-  CMN   = 0b00_00_01_01_00_00_10_00_00, // A.var >/=/< -B.var, updating PFLGs
+  CMF   = 0b00_00_01_01_00_00_00_00_00, // A.var >/=/< FLP( B.VAL ), updating PFLGs
+  CMP   = 0b00_00_01_01_00_00_01_00_00, // A.var >/=/<      B.var,   updating PFLGs
+  CMN   = 0b00_00_01_01_00_00_10_00_00, // A.var >/=/< INV( B.var ), updating PFLGs
 
   MSZ   = 0b00_00_01_01_00_01_00_00_00, // 0 0 0   0 0 0   - 0 +
   MSP   = 0b00_00_01_01_00_01_01_00_00, // - 0 +   0 0 0   0 0 0  // MASKING
@@ -367,9 +368,9 @@ pub const e_oper = enum( u18 ) // represents t9 Tryte
 //XXX   = 0b00_00_01_10_10_01_01_00_00, // 0 - 0   0 + 0
 //XXX   = 0b00_00_01_10_10_01_10_00_00, // + 0 +   - 0 -
 
-//XXX   = 0b00_00_01_10_10_10_00_00_00, // + 0 +   - 0 -
-//XXX   = 0b00_00_01_10_10_10_01_00_00, // 0 - 0   0 + 0
-//XXX   = 0b00_00_01_10_10_10_10_00_00, // + 0 +   - 0 -
+//XXX   = 0b00_00_01_10_10_10_00_00_00, // + - -   - + +
+  PAR   = 0b00_00_01_10_10_10_01_00_00, // - + -   + - + // PARITY
+  NPR   = 0b00_00_01_10_10_10_10_00_00, // - - +   + + -
 
   // ???
 
@@ -426,13 +427,13 @@ pub const e_oper = enum( u18 ) // represents t9 Tryte
   RUT   = 0b00_00_10_01_00_10_01_00_00, // A.var ^ ( 1 / B.var )         NOTE : rounds towards 0
 
 
-  MAX   = 0b00_00_10_01_01_00_00_00_00, // MAX( A.var, B.var )
-  MIN   = 0b00_00_10_01_01_00_01_00_00, // MIN( A.var, B.var )
-//XXX   = 0b00_00_10_01_01_00_10_00_00,
+  AVG   = 0b00_00_10_01_01_00_00_00_00, //    ( A.var + B.var ) / 2      NOTE : rounds towards 0
+  MAX   = 0b00_00_10_01_01_00_01_00_00, // MAX( A.var | B.var )
+  MIN   = 0b00_00_10_01_01_00_10_00_00, // MIN( A.var | B.var )
 
-  ADC   = 0b00_00_10_01_01_01_00_00_00, // ( A.var + B.var ) + CARRY trit
-  SBB   = 0b00_00_10_01_01_01_01_00_00, // ( A.var - B.var ) - BORROW trit << TRYTE_SIZE - 1
-//XXX   = 0b00_00_10_01_01_01_10_00_00, // ( A.var * B.var ) + C.var )   NOTE : only outputs to PREG
+//XXX   = 0b00_00_10_01_01_01_00_00_00,
+  ADC   = 0b00_00_10_01_01_01_01_00_00, // ( A.var + B.var ) + CARRY trit
+  SBB   = 0b00_00_10_01_01_01_10_00_00, // ( A.var - B.var ) - BORROW trit << TRYTE_SIZE - 1
 
   SQR   = 0b00_00_10_01_01_10_00_00_00, // ( A.var + *B.var ) ^ 2        NOTE : is this useful ?
   CUB   = 0b00_00_10_01_01_10_01_00_00, // ( A.var + *B.var ) ^ 3        NOTE : is this useful ?

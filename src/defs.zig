@@ -40,6 +40,18 @@ pub const mem_c = @import( "core/memory.zig" );
 pub const MemBank = mem_c.MemBank;
 
 
+// ================ OPCODE SHORTHANDS ================
+
+pub const trn_c = @import( "core/ternar.zig" );
+pub const Ternar = trn_c.TernarComputer;
+
+
+// ================ OPCODE SHORTHANDS ================
+
+pub const opc_c = @import( "core/opcodes.zig" );
+pub const OpCode = opc_c.e_OpCode;
+
+
 // ================ TRYTE SHORTHANDS ================
 
 pub const trt_c = @import( "core/tryte.zig" );

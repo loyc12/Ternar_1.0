@@ -44,7 +44,8 @@ const strToTryte  = def.strToTryte;
 
 // =========================== DEFS IMPORTS ===========================
 
-const BANK_TRYTE_SIZE : u64 = 531_441; // CAREFUL NOT TO OVERDO IT HERE
+const PAGE_TRYTE_SIZE : u64 = 19_683;
+const BANK_TRYTE_SIZE : u64 = 27 * PAGE_TRYTE_SIZE; // CAREFUL NOT TO OVERDO IT HERE
 const BANK_BYTE_SIZE  : u64 = @divFloor( BITS_PER_TRIT * TRITS_PER_TRYTE * BANK_TRYTE_SIZE, BITS_PER_BYTE ) + 1;
 
 pub inline fn isTritValid( trit : Trit ) bool { return ( trit != 0b00 ); }
@@ -159,3 +160,55 @@ pub const MemBank = struct
     def.log( .INFO, 0, cLoc, "[ {} ] => {s}", .{ tryte_index * TRITS_PER_TRYTE, tryteToStr( tryte )});
   }
 };
+
+
+pub fn testBank() void
+{
+  var bank : MemBank = .{};
+
+
+  def.qlog( .INFO, 0, @src(), "@ Testing Trits\n" );
+
+  bank.logTrit( 9, @src() );
+  bank.setTrit( 9, 0b00 ) catch {};
+  bank.logTrit( 9, @src() );
+
+  bank.logTrit( 10, @src() );
+  bank.setTrit( 10, 0b01 ) catch {};
+  bank.logTrit( 10, @src() );
+
+  bank.logTrit( 12, @src() );
+  bank.setTrit( 12, 0b10 ) catch {};
+  bank.logTrit( 12, @src() );
+
+  bank.logTrit( 15, @src() );
+  bank.setTrit( 15, 0b11 ) catch {};
+  bank.logTrit( 15, @src() );
+
+
+  def.qlog( .INFO, 0, @src(), "@ Testing Trytes\n" );
+
+  bank.logTryte( 1, @src() );
+  bank.setTryte( 1, 0b00_10_00_00_11_00_10_00_01 ) catch {};
+  bank.logTryte( 1, @src() );
+
+  bank.setTryte( 1, def.strToTryte( "0102201.0".* ) catch 0 ) catch {};
+  bank.logTryte( 1, @src() );
+
+  bank.setTryte( 1, def.strToTryte( "-U1:PZF+.".* ) catch 0 ) catch {};
+  bank.logTryte( 1, @src() );
+
+  bank.setTryte( 1, def.strToTryte( "sdgsfdsff".* ) catch 0 ) catch {};
+  bank.logTryte( 1, @src() );
+
+
+  bank.setTryte( 2, 0b10_00_01_11_00_00 ) catch {};
+  bank.logTryte( 2, @src() );
+
+
+  def.qlog( .INFO, 0, @src(), "@ Printing Memory\n" );
+  for( 0 .. 27 )| i | { bank.logTrit( i, @src() ); }
+
+  bank.logTrit(  1272138956297856235, @src() );
+  bank.logTryte( 1272138956297856235, @src() );
+}
