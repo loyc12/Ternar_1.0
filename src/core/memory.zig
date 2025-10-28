@@ -44,7 +44,7 @@ const strToTryte  = def.strToTryte;
 
 // =========================== DEFS IMPORTS ===========================
 
-const BANK_TRYTE_SIZE : u64 = std.math.pow( u64, 3, 12 ); // CAREFUL NOT TO OVERDO IT HERE
+const BANK_TRYTE_SIZE : u64 = 531_441; // CAREFUL NOT TO OVERDO IT HERE
 const BANK_BYTE_SIZE  : u64 = @divFloor( BITS_PER_TRIT * TRITS_PER_TRYTE * BANK_TRYTE_SIZE, BITS_PER_BYTE ) + 1;
 
 pub inline fn isTritValid( trit : Trit ) bool { return ( trit != 0b00 ); }

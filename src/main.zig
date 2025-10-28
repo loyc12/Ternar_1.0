@@ -49,6 +49,7 @@ fn testBank() void
 {
   var bank : MemBank = .{};
 
+
   def.qlog( .INFO, 0, @src(), "@ Testing Trits\n" );
 
   bank.logTrit( 9, @src() );
@@ -66,6 +67,7 @@ fn testBank() void
   bank.logTrit( 15, @src() );
   bank.setTrit( 15, 0b11 ) catch {};
   bank.logTrit( 15, @src() );
+
 
   def.qlog( .INFO, 0, @src(), "@ Testing Trytes\n" );
 
@@ -85,6 +87,7 @@ fn testBank() void
 
   bank.setTryte( 2, 0b10_00_01_11_00_00 ) catch {};
   bank.logTryte( 2, @src() );
+
 
   def.qlog( .INFO, 0, @src(), "@ Printing Memory\n" );
   for( 0 .. 27 )| i | { bank.logTrit( i, @src() ); }
