@@ -2,6 +2,12 @@ const std = @import( "std" );
 const def = @import( "defs" );
 
 
+const MemBank   = def.MemBank;
+const OpCode    = def.OpCode;
+const PRegTryte = def.PRegTryte;
+const PFlagTrit = def.PFlagTrit;
+
+
 var ternarCore : ?def.Ternar = null;
 
 pub fn initCriticals() void
@@ -38,9 +44,7 @@ pub fn main() !void
 
   def.qlog( .INFO, 0, @src(), "# Hello, world!\n" );
 
-  _ = ternarCore ;
-
-  def.mem_c.testBank();
+  _ = ternarCore.?.execOp( @intFromEnum( OpCode.NOP ), null, null, null, null );
 
   def.qlog( .INFO, 0, @src(), "# Goodbye, world...\n" );
 }

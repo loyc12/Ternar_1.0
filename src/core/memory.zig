@@ -20,9 +20,9 @@ const TryteStr        = def.TryteStr;
 
 // Constants
 
-const T2 = def.T2;
-const T0 = def.T0;
-const T1 = def.T1;
+const T2     = def.T2;
+const T0     = def.T0;
+const T1     = def.T1;
 const tPos   = def.tPos;
 const tZero  = def.tZero;
 const tNeg   = def.tNeg;
@@ -42,7 +42,7 @@ const strToTryte  = def.strToTryte;
 
 
 
-// =========================== DEFS IMPORTS ===========================
+// =========================== MEMORY BANK ===========================
 
 const PAGE_TRYTE_SIZE : u64 = 19_683;
 const BANK_TRYTE_SIZE : u64 = 27 * PAGE_TRYTE_SIZE; // CAREFUL NOT TO OVERDO IT HERE
