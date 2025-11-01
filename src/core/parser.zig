@@ -2,9 +2,8 @@ const std = @import( "std" );
 const def = @import( "defs" );
 
 var isFileInit : bool = false;
-var isReadInit : bool = false;
 var lineBuffer : [ 1024 ]u8 = undefined;
-var lineReader : std.fs.File.Reader = undefined;
+var fileReader : std.fs.File.Reader = undefined;
 
 var file : std.fs.File = undefined;
 var row  : u32 = 0;
@@ -19,11 +18,12 @@ pub fn openFile( comptime filePath : [:0] const u8 ) void
 
   file = if( std.fs.cwd().openFile( filePath, .{} )) | f | f else | err |
   {
-    def.log( .ERROR, 0, @src(), "Failed to open file : {s} : {}", .{ filePath, err });
+    def.log( .ERROR, 0, @src(), "Failed to open file '{s}' : {}", .{ filePath, err });
+    isFileInit = false;
     return;
   };
 
-  lineReader = file.reader( &lineBuffer );
+  fileReader = file.reader( &lineBuffer );
   row = 0;
 
   isFileInit = true;
@@ -49,7 +49,7 @@ pub fn logNextLine() void
     return;
   }
 
-  const line = if ( lineReader.interface.takeDelimiter('\n')) | l | l else | err |
+  const line = if( fileReader.interface.takeDelimiter('\n')) | l | l else | err |
   {
     def.log( .ERROR, 0, @src(), "Failed to read file line : {}", .{ err });
     return;
@@ -63,7 +63,13 @@ pub fn logNextLine() void
   else
   {
     def.qlog( .INFO, row, @src(), "EOF reached\n" );
+    return;
   }
+}
+
+pub fn parseNextLine() void
+{
+  // TODO : implement me
 }
 
 
@@ -85,7 +91,7 @@ pub fn testParser() void
   closeFile();
 
   openFile( "exampleAssemblies/debug.trn" );
-  openFile( "exampleAssemblies/debug.trn" );
+  openFile( "BAD_PATH" );
   logNextLine();
   closeFile();
 
