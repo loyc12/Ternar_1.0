@@ -140,10 +140,10 @@ pub const e_OpCode = enum( u18 ) // represents t9 Tryte
 //XXX   = 0b00_00_00_00_00_00_10_00_00,
 
   INF   = 0b00_00_00_00_00_01_00_00_00, // writes device info to A.adr
-//SFL   = 0b00_00_00_00_00_01_01_00_00, // sets PFLG.var to A.var
+//SFL   = 0b00_00_00_00_00_01_01_00_00, // sets PFLG.var to
 //GFL   = 0b00_00_00_00_00_01_10_00_00, // sets A.var to PFLG.var
 
-//XXX   = 0b00_00_00_00_00_10_00_00_00,
+  PRT   = 0b00_00_00_00_00_10_00_00_00, // writes A.var to terminal
 //XXX   = 0b00_00_00_00_00_10_01_00_00
 //XXX   = 0b00_00_00_00_00_10_10_00_00,
 
@@ -160,10 +160,10 @@ pub const e_OpCode = enum( u18 ) // represents t9 Tryte
 //XXX   = 0b00_00_00_00_01_10_01_00_00,
 //XXX   = 0b00_00_00_00_01_10_10_00_00,
 
-  // sys macros          1T ( 0 arg ) |
-  CNT   = 0b00_00_00_00_10_01_00_00_00, // step / resume process  ( continue  ) => sets F_ST to 0 and increments PREG.var by OLEN.val
-  TRM   = 0b00_00_00_00_10_01_01_00_00, // suspend / quit process ( terminate ) => sets F_ST to + and calls exit protocol  if F_IP allows
-  YLD   = 0b00_00_00_00_10_01_10_00_00, // interupt process       ( yield     ) => sets F_ST to - and calls pause protocol if F_IP allows
+  // sys macros          1T ( 0 arg ) | NOTE : ignores A ( for now ? )
+  CNT   = 0b00_00_00_00_10_01_00_00_00, // resume process   ( continue  ) => sets F_ST to 0 and increments PREG.var by OLEN.val
+  TRM   = 0b00_00_00_00_10_01_01_00_00, // suspend process  ( terminate ) => sets F_ST to + and calls exit protocol  if F_IP allows
+  YLD   = 0b00_00_00_00_10_01_10_00_00, // interupt process ( yield     ) => sets F_ST to - and calls pause protocol if F_IP allows
 
 //XXX   = 0b00_00_00_00_10_01_00_00_00,
 //XXX   = 0b00_00_00_00_10_01_01_00_00,

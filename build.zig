@@ -14,16 +14,6 @@ pub fn build( b: *std.Build ) void
   const target   = b.standardTargetOptions(  .{} );
   const optimize = b.standardOptimizeOption( .{} );
 
-  // This is a build option that allows the user to specify the path to the game-specific engine interface module
-  const tmp_boot_exe_path = b.option(
-    []const u8,
-    "boot_exe_path",
-    "Path to a game's bootExe implementations (e.g., examplexecutables/exeFolder/boot.zig)"
-  );
-
-  // This sets the default path for the engine interface module to the template
-  const boot_exe_path = if( tmp_boot_exe_path )| path | path else "exampleExecutables/debug/boot.zig";
-
 
   // ================================ EXECUTABLE ================================
 
@@ -62,16 +52,6 @@ pub fn build( b: *std.Build ) void
   });
   defs.addImport( "defs", defs );
   exe.root_module.addImport( "defs", defs );
-
-  // This adds the engine interface module, which is expected to contain the game-specific gameHooks & engineSettings implementations.
-  const boot_exe = b.createModule(
-  .{
-    .root_source_file = b.path( boot_exe_path ), // NOTE : This path is user defined at build time
-    .target           = target,
-    .optimize         = optimize,
-  });
-  boot_exe.addImport( "defs", defs );
-  exe.root_module.addImport(  "bootExe", boot_exe );
 
 
   // ================================ COMMANDS ================================
