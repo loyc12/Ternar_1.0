@@ -110,12 +110,12 @@ pub const e_OpCode = enum( u18 ) // represents t9 Tryte
   // INPUT SPACE  |
   pub const I_VL  : u18 = 0b00_00_00_00_00_00_00_00_00; // raw values   ( in-place ops stored in prog. as static val. )
   pub const I_AD  : u18 = 0b01_00_00_00_00_00_00_00_00; // RAM adresses ( upper half of the address in MSEG )
-  pub const I_RA  : u18 = 0b10_00_00_00_00_00_00_00_00; // RAM adresses ( relative to current PADR.val, signed )
+  pub const I_RA  : u18 = 0b10_00_00_00_00_00_00_00_00; // RAM adresses ( relative to current PADR.var, signed )
 
   // OUTPUT SPACE | always outputs to PREG as well
   pub const O_VL  : u18 = 0b00_00_00_00_00_00_00_00_00; // raw values   ( in-place ops stored in prog. as static val. )
   pub const O_AD  : u18 = 0b00_01_00_00_00_00_00_00_00; // RAM adresses ( upper half of the address in MSEG )
-  pub const O_RA  : u18 = 0b00_10_00_00_00_00_00_00_00; // RAM adresses ( relative to current PADR.val, signed )
+  pub const O_RA  : u18 = 0b00_10_00_00_00_00_00_00_00; // RAM adresses ( relative to current PADR.var, signed )
 
   // OP CONDITION | only execute opcode if :
   pub const C_ALW : u18 = 0b00_00_00_00_00_00_00_00_00; // always, unconditionally
@@ -135,7 +135,7 @@ pub const e_OpCode = enum( u18 ) // represents t9 Tryte
 
   // SYSTEM OPS          2T ( 1 arg ) |
 
-  NOP   = 0b00_00_00_00_00_00_00_00_00, // do nothing ( TODO : nothing * A.val )
+  NOP   = 0b00_00_00_00_00_00_00_00_00, // do nothing ( TODO : nothing * A.var )
 //XXX   = 0b00_00_00_00_00_00_01_00_00
 //XXX   = 0b00_00_00_00_00_00_10_00_00,
 
@@ -161,7 +161,7 @@ pub const e_OpCode = enum( u18 ) // represents t9 Tryte
 //XXX   = 0b00_00_00_00_01_10_10_00_00,
 
   // sys macros          1T ( 0 arg ) | NOTE : ignores A ( for now ? )
-  CNT   = 0b00_00_00_00_10_01_00_00_00, // resume process   ( continue  ) => sets F_ST to 0 and increments PREG.var by OLEN.val
+  CNT   = 0b00_00_00_00_10_01_00_00_00, // resume process   ( continue  ) => sets F_ST to 0 and increments PREG.var by OLEN.var
   TRM   = 0b00_00_00_00_10_01_01_00_00, // suspend process  ( terminate ) => sets F_ST to + and calls exit protocol  if F_IP allows
   YLD   = 0b00_00_00_00_10_01_10_00_00, // interupt process ( yield     ) => sets F_ST to - and calls pause protocol if F_IP allows
 
@@ -189,7 +189,7 @@ pub const e_OpCode = enum( u18 ) // represents t9 Tryte
 
   JMP   = 0b00_00_00_01_01_00_00_00_00, // set PADR to A.var
   CAL   = 0b00_00_00_01_01_00_01_00_00, // PSH( PADR.var ) + JMP( A.var )
-  RET   = 0b00_00_00_01_01_00_10_00_00, // JMP( POP().var )              ( + SSA( A )? )
+  RET   = 0b00_00_00_01_01_00_10_00_00, // JMP( POP().var )               ( + SSA( A )? )
 
 //XXX   = 0b00_00_00_01_01_01_00_00_00,
 //XXX   = 0b00_00_00_01_01_01_01_00_00,
@@ -201,7 +201,7 @@ pub const e_OpCode = enum( u18 ) // represents t9 Tryte
 
   PSS   = 0b00_00_00_01_10_00_00_00_00, // pushes A.var into PSTK.stk
   PPS   = 0b00_00_00_01_10_00_01_00_00, // pops from PSTK.stk into A.adr
-  CLS   = 0b00_00_00_01_10_00_10_00_00, // empties the PSTK.stk          ( + SSA( A )? )
+  CLS   = 0b00_00_00_01_10_00_10_00_00, // empties the PSTK.stk           ( + SSA( A )? )
 
 //XXX   = 0b00_00_00_01_10_01_00_00_00,
 //XXX   = 0b00_00_00_01_10_01_01_00_00,
@@ -325,25 +325,25 @@ pub const e_OpCode = enum( u18 ) // represents t9 Tryte
 //XXX   = 0b00_00_01_01_10_10_01_00_00, //
 //XXX   = 0b00_00_01_01_10_10_10_00_00, //
 
-  // TRIT1 OPS          4T ( 3 args ) | in place ops.
+  // TRIT1 OPS           2T ( 1 arg ) | in place ops.
 
-  INC   = 0b00_00_01_10_00_00_00_00_00, // increment     A.var, *B.var, *C.var
-  DEC   = 0b00_00_01_10_00_00_01_00_00, // decrement     A.var, *B.var, *C.var
-  INV   = 0b00_00_01_10_00_00_10_00_00, // negate/invert A.var, *B.var, *C.var
+  INC   = 0b00_00_01_10_00_00_00_00_00, // increment     A.var
+  DEC   = 0b00_00_01_10_00_00_01_00_00, // decrement     A.var
+  INV   = 0b00_00_01_10_00_00_10_00_00, // negate/invert A.var
 
-  SHU   = 0b00_00_01_10_00_01_00_00_00, // shift all trits in tryte up   by one in A.var, *B.var, *C.var
-  SHD   = 0b00_00_01_10_00_01_01_00_00, // shift all trits in tryte down by one in A.var, *B.var, *C.var
-  SHV   = 0b00_00_01_10_00_01_10_00_00, // shift all trits in tryte by A.var    in B.var, *C.var
+  SHU   = 0b00_00_01_10_00_01_00_00_00, // shift all trits in tryte up   by one in A.var
+  SHD   = 0b00_00_01_10_00_01_01_00_00, // shift all trits in tryte down by one in A.var
+  SHV   = 0b00_00_01_10_00_01_10_00_00, // shift all trits in tryte by A.var
 
-  RTU   = 0b00_00_01_10_00_10_00_00_00, // rotate all trits in tryte up   by one in A.var, *B.var, *C.var
-  RTD   = 0b00_00_01_10_00_10_01_00_00, // rotate all trits in tryte down by one in A.var, *B.var, *C.var
-  RTV   = 0b00_00_01_10_00_10_10_00_00, // rotate all trits in tryte by A.var    in B.var, *C.var
+  RTU   = 0b00_00_01_10_00_10_00_00_00, // rotate all trits in tryte up   by one in A.var
+  RTD   = 0b00_00_01_10_00_10_01_00_00, // rotate all trits in tryte down by one in A.var
+  RTV   = 0b00_00_01_10_00_10_10_00_00, // rotate all trits in tryte by A.var
 
-  FLP   = 0b00_00_01_10_01_00_00_00_00, // flip all trits back-to-front for A.var, *B.var, *C.var
+  FLP   = 0b00_00_01_10_01_00_00_00_00, // flip all trits back-to-front for A.var
   PTZ   = 0b00_00_01_10_01_00_01_00_00, // converts all 1 trits to 0
   NTZ   = 0b00_00_01_10_01_00_10_00_00, // converts all 2 trits to 0
 
-  MAG   = 0b00_00_01_10_01_01_00_00_00, // set A.var, *B.var, *C.var to the sum of their individual trits
+  MAG   = 0b00_00_01_10_01_01_00_00_00, // set A.var to the sum of individual trits
   PTN   = 0b00_00_01_10_01_01_01_00_00, // clamp all 1 trits to 2
   NTP   = 0b00_00_01_10_01_01_10_00_00, // clamp all 2 trits to 1
 
@@ -365,9 +365,9 @@ pub const e_OpCode = enum( u18 ) // represents t9 Tryte
 
   // TRIT2 OPS          4T ( 3 args ) | outputs to C.adr
 
-  CMF   = 0b00_00_10_00_00_00_00_00_00, // A.var >/=/< FLP( B.VAL ), updating PFLGs
-  CMP   = 0b00_00_10_00_00_00_01_00_00, // A.var >/=/<      B.var,   updating PFLGs
-  CMN   = 0b00_00_10_00_00_00_10_00_00, // A.var >/=/< INV( B.var ), updating PFLGs
+  CMF   = 0b00_00_10_00_00_00_00_00_00, // A.var >/=/< FLP( B.var ), updating PFLGs
+  CMP   = 0b00_00_10_00_00_00_01_00_00, // A.var >/=/< PTZ( B.var ), updating PFLGs
+  CMN   = 0b00_00_10_00_00_00_10_00_00, // A.var >/=/< NTZ( B.var ), updating PFLGs
 
   MSZ   = 0b00_00_10_00_00_01_00_00_00, // 0 0 0   0 0 0   - 0 +
   MSP   = 0b00_00_10_00_00_01_01_00_00, // - 0 +   0 0 0   0 0 0  // MASKING

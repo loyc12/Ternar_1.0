@@ -42,17 +42,27 @@ pub const MemBank = mem_c.MemBank;
 
 // ================ OPCODE SHORTHANDS ================
 
-pub const trn_c = @import( "core/ternar.zig" );
-pub const Ternar = trn_c.Ternar;
-
-
-// ================ OPCODE SHORTHANDS ================
-
 pub const opc_c = @import( "core/opcodes.zig" );
 pub const OpCode = opc_c.e_OpCode;
 
 pub const PFlagTrit = opc_c.e_PFlagTrit;
 pub const PRegTryte = opc_c.e_PRegTryte;
+
+
+// ================ TERNAR SHORTHANDS ================
+
+pub const prs_c = @import( "core/parser.zig" );
+
+pub const openFile    = prs_c.openFile;
+pub const closeFile   = prs_c.closeFile;
+pub const logNextLine = prs_c.logNextLine;
+
+
+
+// ================ TERNAR SHORTHANDS ================
+
+pub const trn_c = @import( "core/ternar.zig" );
+pub const Ternar = trn_c.Ternar;
 
 
 // ================ TRYTE SHORTHANDS ================

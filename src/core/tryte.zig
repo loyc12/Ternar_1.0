@@ -20,17 +20,17 @@ pub const TritChar = u8;
 pub const TryteStr = [ TRITS_PER_TRYTE ]u8;
 
 
-pub const T2 = 0b10;
-pub const T0 = 0b00;
-pub const T1 = 0b01;
+pub const T2 : Trit = 0b10;
+pub const T0 : Trit = 0b00;
+pub const T1 : Trit = 0b01;
 
-pub const tPos  = 0b01;
-pub const tZero = 0b00;
-pub const tNeg  = 0b10;
+pub const tPos  : Trit = 0b01;
+pub const tZero : Trit = 0b00;
+pub const tNeg  : Trit = 0b10;
 
-pub const tTrue  = 0b01;
-pub const tMaybe = 0b00;
-pub const tFalse = 0b10;
+pub const tTrue  : Trit = 0b01;
+pub const tMaybe : Trit = 0b00;
+pub const tFalse : Trit = 0b10;
 
 
 // =========================== TRIT-TRYTE CONVERSION ===========================

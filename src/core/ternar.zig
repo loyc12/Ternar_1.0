@@ -1,6 +1,7 @@
 const std = @import( "std" );
 const def = @import( "defs" );
 
+const ops = @import( "opfuncts.zig" );
 
 // =========================== DEFS IMPORTS ===========================
 
@@ -48,6 +49,7 @@ const MemBank   = def.MemBank;
 const OpCode    = def.OpCode;
 const PRegTryte = def.PRegTryte;
 const PFlagTrit = def.PFlagTrit;
+
 
 pub const Ternar = struct
 {
@@ -282,125 +284,12 @@ pub const Ternar = struct
 
     switch( OPN )
     {
-    // SYSTEM OPS                2T ( 1 arg ) |
+    // SYSTEM OPS      2T ( 1 arg ) |
 
-      @intFromEnum( OpCode.NOP ) => {                      }, // TODO : handle A as a multiplier
+      @intFromEnum( OpCode.NOP ) => { ops.NOP( self, A ); },
+    //@intFromEnum( OpCode.INF ) => { ops.INF( self, A ); },
+    //@intFromEnum( OpCode.PRT ) => { ops.PRT( self, A ); },
 
-    //@intFromEnum( OpCode.JMP ) => { self.JMP( A );       },
-
-    // MOVE OPS                 3T ( 2 args ) | in place ops
-
-    //@intFromEnum( OpCode.CPY ) => { self.CPY( A, B );    },
-    //@intFromEnum( OpCode.SWP ) => { self.SWP( A, B );    },
-
-    //@intFromEnum( OpCode.STR ) => { self.STR( A, B );    },
-    //@intFromEnum( OpCode.LOD ) => { self.LOD( A, B );    },
-    //@intFromEnum( OpCode.STL ) => { self.STR( A, null ); self.LOD( B, null ); },
-
-    // MULTI OPS                4T ( 3 args ) |
-
-    //@intFromEnum( OpCode.STM ) => { self.STM( A, B, C ); },
-    //@intFromEnum( OpCode.CPM ) => { self.CPM( A, B, C ); },
-    //@intFromEnum( OpCode.SWM ) => { self.SWM( A, B, C ); },
-
-    //@intFromEnum( OpCode.PSH ) => { self.PSH( A, B, C ); },
-    //@intFromEnum( OpCode.POP ) => { self.POP( A, B, C ); },
-    //@intFromEnum( OpCode.CLR ) => { self.CLR( A, B, C ); },
-
-    // GATE OPS                 3T ( 2 args ) | outputs to PREG only
-
-    //@intFromEnum( OpCode.AND ) => { self.AND( A, B );    },
-    //@intFromEnum( OpCode.NAN ) => { self.NAN( A, B );    },
-
-    //@intFromEnum( OpCode.ORR ) => { self.ORR( A, B );    },
-    //@intFromEnum( OpCode.NOR ) => { self.NOR( A, B );    },
-
-    //@intFromEnum( OpCode.XOR ) => { self.XOR( A, B );    },
-    //@intFromEnum( OpCode.XNR ) => { self.XNR( A, B );    },
-
-    //@intFromEnum( OpCode.MAJ ) => { self.MAJ( A, B );    },
-    //@intFromEnum( OpCode.IMJ ) => { self.IMJ( A, B );    },
-
-    //@intFromEnum( OpCode.CON ) => { self.CON( A, B );    },
-    //@intFromEnum( OpCode.ICN ) => { self.ICN( A, B );    },
-
-    //@intFromEnum( OpCode.PAR ) => { self.PAR( A, B );    },
-    //@intFromEnum( OpCode.NPR ) => { self.NPR( A, B );    },
-
-    // TRIT1 OPS                4T ( 3 args ) | in place ops.
-
-    //@intFromEnum( OpCode.INC ) => { self.INC( A, B, C ); },
-    //@intFromEnum( OpCode.DEC ) => { self.DEC( A, B, C ); },
-    //@intFromEnum( OpCode.INV ) => { self.INV( A, B, C ); },
-
-    //@intFromEnum( OpCode.SHU ) => { self.SHU( A, B, C ); },
-    //@intFromEnum( OpCode.SHD ) => { self.SHD( A, B, C ); },
-    //@intFromEnum( OpCode.SHV ) => { self.SHV( A, B, C ); },
-
-    //@intFromEnum( OpCode.RTU ) => { self.RTU( A, B, C ); },
-    //@intFromEnum( OpCode.RTD ) => { self.RTD( A, B, C ); },
-    //@intFromEnum( OpCode.RTV ) => { self.RTV( A, B, C ); },
-
-    //@intFromEnum( OpCode.FLP ) => { self.INC( A, B, C ); },
-    //@intFromEnum( OpCode.PTZ ) => { self.DEC( A, B, C ); },
-    //@intFromEnum( OpCode.NTZ ) => { self.INV( A, B, C ); },
-
-    //@intFromEnum( OpCode.MAG ) => { self.SHU( A, B, C ); },
-    //@intFromEnum( OpCode.PTN ) => { self.SHD( A, B, C ); },
-    //@intFromEnum( OpCode.NTP ) => { self.SHV( A, B, C ); },
-
-    //@intFromEnum( OpCode.EQZ ) => { self.RTU( A, B, C ); },
-    //@intFromEnum( OpCode.ZTP ) => { self.RTD( A, B, C ); },
-    //@intFromEnum( OpCode.ZTN ) => { self.RTV( A, B, C ); },
-
-    //@intFromEnum( OpCode.TUP ) => { self.TUP( A, B, C ); },
-    //@intFromEnum( OpCode.TDW ) => { self.TDW( A, B, C ); },
-
-    //@intFromEnum( OpCode.DET ) => { self.DET( A, B, C ); },
-    //@intFromEnum( OpCode.IDT ) => { self.IDT( A, B, C ); },
-
-    //@intFromEnum( OpCode.CMZ ) => { self.CMZ( A, B, C ); },
-
-    // TRIT2 OPS                4T ( 3 args ) | outputs to C.adr
-
-    //@intFromEnum( OpCode.CMF ) => { self.CMF( A, B, C ); },
-    //@intFromEnum( OpCode.CMP ) => { self.CMP( A, B, C ); },
-    //@intFromEnum( OpCode.CMN ) => { self.CMN( A, B, C ); },
-
-    //@intFromEnum( OpCode.MSZ ) => { self.MSZ( A, B, C ); },
-    //@intFromEnum( OpCode.MSP ) => { self.MSP( A, B, C ); },
-    //@intFromEnum( OpCode.MSN ) => { self.MSN( A, B, C ); },
-
-    // ALU1 OPS                 4T ( 3 args ) | outputs to C.adr
-
-    //@intFromEnum( OpCode.ADD ) => { self.ADD( A, B, C ); },
-    //@intFromEnum( OpCode.SUB ) => { self.SUB( A, B, C ); },
-    //@intFromEnum( OpCode.MUL ) => { self.MUL( A, B, C ); },
-
-    //@intFromEnum( OpCode.MOD ) => { self.MOD( A, B, C ); },
-    //@intFromEnum( OpCode.EXP ) => { self.EXP( A, B, C ); },
-    //@intFromEnum( OpCode.LOG ) => { self.LOG( A, B, C ); },
-
-    //@intFromEnum( OpCode.DIV ) => { self.DIV( A, B, C ); },
-    //@intFromEnum( OpCode.RND ) => { self.RND( A, B, C ); },
-    //@intFromEnum( OpCode.RUT ) => { self.RUT( A, B, C ); },
-
-    //@intFromEnum( OpCode.AVG ) => { self.AVG( A, B, C ); },
-    //@intFromEnum( OpCode.MAX ) => { self.MAX( A, B, C ); },
-    //@intFromEnum( OpCode.MIN ) => { self.MIN( A, B, C ); },
-
-    //@intFromEnum( OpCode.ADC ) => { self.ADC( A, B, C ); },
-    //@intFromEnum( OpCode.SBB ) => { self.SBB( A, B, C ); },
-
-    //@intFromEnum( OpCode.SQR ) => { self.SQR( A, B, C ); },
-    //@intFromEnum( OpCode.CUB ) => { self.CUB( A, B, C ); },
-    //@intFromEnum( OpCode.MDT ) => { self.MDT( A, B, C ); },
-
-    // ALU2 OPS                 5T ( 4 args ) | outputs to D.adr
-
-    //@intFromEnum( OpCode.MED ) => { self.MED( A, B, C, D ); },
-    //@intFromEnum( OpCode.MAD ) => { self.MAD( A, B, C, D ); },
-    //@intFromEnum( OpCode.AMU ) => { self.AMU( A, B, C, D ); },
 
       else => return false,
     }
