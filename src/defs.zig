@@ -43,7 +43,8 @@ pub const MemBank = mem_c.MemBank;
 // ================ OPCODE SHORTHANDS ================
 
 pub const opc_c = @import( "core/opcodes.zig" );
-pub const OpCode = opc_c.e_OpCode;
+pub const OpCode    = opc_c.e_OpCode;
+pub const opCodeMap = opc_c.opCodeMap;
 
 pub const PFlagTrit = opc_c.e_PFlagTrit;
 pub const PRegTryte = opc_c.e_PRegTryte;
@@ -53,10 +54,10 @@ pub const PRegTryte = opc_c.e_PRegTryte;
 
 pub const prs_c = @import( "core/parser.zig" );
 
-pub const openFile    = prs_c.openFile;
-pub const closeFile   = prs_c.closeFile;
-pub const logNextLine = prs_c.logNextLine;
-
+pub const openFile      = prs_c.openFile;
+pub const closeFile     = prs_c.closeFile;
+pub const loadNextLine  = prs_c.loadNextLine;
+pub const parseNextLine = prs_c.parseNextLine;
 
 
 // ================ TERNAR SHORTHANDS ================

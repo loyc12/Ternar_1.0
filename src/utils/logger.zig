@@ -136,7 +136,7 @@ pub fn log( level : LogLevel, id : u32, cLoc : ?std.builtin.SourceLocation, comp
     //  return;
     //};
 
-    std.debug.print( "\n > ", .{} );
+    std.debug.print( "\n  ", .{} );
   }
 
   // Prints the actual message

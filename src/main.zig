@@ -31,8 +31,6 @@ pub fn deinitCriticals() void
 
   def.deinitAllUtils();
 
-  def.prs_c.testParser();
-
   def.qlog( .INFO, 0, @src(), "$ Deinitialized all subsystems\n" );
 }
 
@@ -47,6 +45,8 @@ pub fn main() !void
   def.qlog( .INFO, 0, @src(), "# Hello, world!\n" );
 
   _ = ternarCore.?.execOp( @intFromEnum( OpCode.NOP ), null, null, null, null );
+
+  def.prs_c.testParser();
 
   def.qlog( .INFO, 0, @src(), "# Goodbye, world...\n" );
 }

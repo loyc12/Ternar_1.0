@@ -1,4 +1,4 @@
-NOP( 0 );
-NOP( 0 );
-NOP( 0 );
-TRM( 0 );
+NOP.0;
+NOP.0;
+NOP.0;
+TRM.0;
