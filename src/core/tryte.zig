@@ -36,21 +36,16 @@ pub const tFalse : Trit = 0b10; // F
 // NOTE : Using balanced ternary, so all numerical values are signed by default
 // NOTE : Sign of a tryte is determined by the sign of its MSD
 
-// =========================== TRIT-TRYTE CONVERSION ===========================
+
+// ================================ TRIT FUNCTIONS ================================
+
+// ================ CONVERSION ================
 
 pub inline fn tritToTryte( trit : Trit, index : u5 ) Tryte
 {
   const t : Tryte = @intCast( trit );
   return( t << ( index * BITS_PER_TRIT ));
 }
-
-pub inline fn tryteToTrit( tryte : Tryte, index : u5 ) Trit
-{
-  return @intCast( 0b11 & ( tryte >> ( index * BITS_PER_TRIT )));
-}
-
-
-// =========================== SYMBOLIC CONVERSION ===========================
 
 pub inline fn tritToChar( trit : Trit ) u8
 {
@@ -78,6 +73,25 @@ pub inline fn charToTrit( c : u8 ) !Trit
       return error.InvalidTritChar;
     }
   }
+}
+
+
+// ================ OPERATIONS ================
+
+
+
+// ================ ARITHMETICS ================
+
+
+
+
+// ================================ TRYTE FUNCTIONS ================================
+
+// ================ CONVERSION ================
+
+pub inline fn tryteToTrit( tryte : Tryte, index : u5 ) Trit
+{
+  return @intCast( 0b11 & ( tryte >> ( index * BITS_PER_TRIT )));
 }
 
 pub inline fn tryteToStr( tryte : Tryte ) TryteStr
@@ -111,21 +125,8 @@ pub inline fn strToTryte( s : TryteStr ) !Tryte
 
 
 
-// =========================== TRITWISE OPERATIONS ===========================
-
-// TODO : tritAnd, tritOr, tritXor, TridNor, tritNand, etc
-
-
 // =========================== TRYTEWISE OPERATIONS ===========================
 
-// TODO : tryteAnd, tryteOr, tryteXor, TridNor, tryteNand, etc
-
-
-// =========================== TRIT ARITHMETICS ===========================
-
-// TODO : tritAdd, tritSub, tritMod, TridMul, tritDiv, etc
 
 
 // =========================== TRYTE ARITHMETICS ===========================
-
-// TODO : tryteAdd, tryteSub, tryteMod, TridMul, tryteDiv, etc

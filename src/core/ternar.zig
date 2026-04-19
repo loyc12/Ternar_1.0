@@ -209,7 +209,7 @@ pub const Ternar = struct
 
   // =========================== OPCODE EXECUTION ===========================
 
-  pub fn execOp( self : *Ternar, op : Tryte, arg1 : ?Tryte, arg2 : ?Tryte, arg3 : ?Tryte, arg4 : ?Tryte, ) bool
+  pub fn tryExecOp( self : *Ternar, op : Tryte, arg1 : ?Tryte, arg2 : ?Tryte, arg3 : ?Tryte, arg4 : ?Tryte, ) bool
   {
     // VALIDATING OPMODS
 
@@ -289,7 +289,7 @@ pub const Ternar = struct
 
     const opName : OpCode = @enumFromInt( def.getOpComp( op, ._OPN_ ));
 
-    switch( opName )
+    switch( opName ) // TODO : move to its own function
     {
       OpCode.NOPE => { def.opList.NOPE( self, A ); },
 

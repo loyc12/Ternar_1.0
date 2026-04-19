@@ -36,13 +36,13 @@ pub fn deinitAllUtils() void
 
 // ================ MEMORY SHORTHANDS ================
 
-pub const mem_c = @import( "core/memory.zig" );
+pub const mem_c   = @import( "core/memory.zig" );
 pub const MemBank = mem_c.MemBank;
 
 
 // ================ OPCODE SHORTHANDS ================
 
-pub const opc_c = @import( "core/opcodes.zig" );
+pub const opc_c      = @import( "core/opcodes.zig" );
 pub const OpCodeMask = opc_c.OpCode;
 pub const OpCode     = opc_c.OpCode;
 pub const opCodeMap  = opc_c.opCodeMap;
@@ -56,7 +56,7 @@ pub const getOpLen   = opc_c.getOpLen;
 
 // ================ OPCODE SHORTHANDS ================
 
-pub const opf_c = @import( "core/opfuncts.zig" );
+pub const opf_c  = @import( "core/opfuncts.zig" );
 pub const opList = opf_c;
 
 
@@ -72,7 +72,7 @@ pub const parseNextLine = prs_c.parseNextLine;
 
 // ================ TERNAR SHORTHANDS ================
 
-pub const trn_c = @import( "core/ternar.zig" );
+pub const trn_c  = @import( "core/ternar.zig" );
 pub const Ternar = trn_c.Ternar;
 
 
@@ -141,10 +141,10 @@ pub const logTmpTimer   = log_u.logTmpTimer;
 
 // ================ TIMER SHORTHANDS ================
 
-pub const tmr_u         = @import( "utils/timer.zig" );
+pub const tmr_u = @import( "utils/timer.zig" );
 
-pub const TimeVal       = tmr_u.TimeVal;
-pub const Timer         = tmr_u.Timer;
-pub const e_timer_flags = tmr_u.e_timer_flags;
+pub const TimeVal    = tmr_u.TimeVal;
+pub const Timer      = tmr_u.Timer;
+pub const TimerFlags = tmr_u.TimerFlags;
 
-pub const getNow        = tmr_u.getNow;
+pub const getNow     = tmr_u.getNow;

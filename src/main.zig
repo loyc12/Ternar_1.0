@@ -44,7 +44,7 @@ pub fn main() !void
 
   def.qlog( .INFO, 0, @src(), "# Hello, world!\n" );
 
-  _ = ternarCore.?.execOp( @intFromEnum( OpCode.NOPE ), null, null, null, null );
+  _ = ternarCore.?.tryExecOp( @intFromEnum( OpCode.NOPE ), null, null, null, null );
 
   def.prs_c.testParser();
 
