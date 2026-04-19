@@ -160,8 +160,8 @@ pub const OpCodeMask = enum( u18 )
 pub const PFlagTrit = enum( u4 )
 {
   F_SN = 0, // what the last ALU/CMPR op returned                     ( -/0/+ ) sign flag
-  F_OV = 1, // if the last ALU op overflowed                          ( -/0/+ ) overflow flag ( add / sub )
-  F_FL = 2, // if the last ALU op under- or over-flowed               (  -/+  ) over/under flow flag   ( add / sub / mul, div )
+  F_OV = 1, // if the last add/sub op overflowed                      ( -/0/+ ) add overflow flag ( add / sub )
+  F_XC = 2, // if the last mul/div op overflowed                      ( -/0/+ ) mul overflow flag ( mul / div )
 //F_XX = 3, // TBA
   F_OR = 4, // whether the last opcond was false, skipped or true     ( -/0/+ ) opcond result flag
   F_OM = 5, // how to modify the next opcond ( inv, skip )            ( -/0/+ ) opcond modifier flag
@@ -206,7 +206,7 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
   // OP CONDITION | only execute opcode if :
   pub const C_ALW : u18 = 0b00_00_00_00_00_00_00_00_00; // always, unconditionally
   pub const C_IFC : u18 = 0b00_00_00_00_00_00_00_00_01; // if F_OV != 0
-  pub const C_IFF : u18 = 0b00_00_00_00_00_00_00_00_10; // if F_FL != 0
+  pub const C_IFF : u18 = 0b00_00_00_00_00_00_00_00_10; // if F_XC != 0
 
   pub const C_IFZ : u18 = 0b00_00_00_00_00_00_00_01_00; // if F_SN != 0
   pub const C_IFP : u18 = 0b00_00_00_00_00_00_00_01_01; // if F_SN != +
