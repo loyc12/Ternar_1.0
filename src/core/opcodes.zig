@@ -45,20 +45,6 @@ pub inline fn getOpLen( op : Tryte ) ?u18
   }
 }
 
-// =========================== PROCESS FLAGS ( TRITS OF R_PFLG ) ===========================
-
-pub const PFlagTrit = enum( u4 )
-{
-  F_SN = 0, // what the last ALU/CMPR op returned                     ( -/0/+ ) sign flag
-  F_CR = 1, // if the last ALU op had a carry                         (  -/+  ) carry flag             ( add )
-  F_BR = 2, // if the last ALU op had a borrow                        (  -/+  ) borrow flag            ( sub )
-  F_FL = 3, // if the last ALU op under- or over-flowed               (  -/+  ) over/under flow flag   ( add, sub, mul )
-  F_OR = 4, // wether the last opcond was false, skipped or true      ( -/0/+ ) opcond result flag
-  F_OM = 5, // how to modify the next opcond ( inv, skip )            (  -/+  ) opcond modifier flag
-  F_IS = 6, // when to auto-inter. ( on step, never, on jmp )         ( -/0/+ ) interupt-on-step flag
-  F_ST = 7, // if the process is quiting, running or pausing          ( -/0/+ ) process state flag   TODO : check if useless ?
-  F_IP = 8, // if the process can inter. itself( via SYSC, no, yes )  ( -/0/+ ) interupt permissions
-};
 
 // =========================== PUM MEMORY LAYOUT ===========================
 // processing unit memory ( page 0 ) : 19_683 Trytes
@@ -109,6 +95,7 @@ pub const PRegTryte = enum( u4 ) // TODO : add more work regs ?
 // ========= PSR : stack registers =========
 
 // ?-end => process stack(s) : size = 9 * MAX_RECURSIVITY ( stores full PPR context )
+
 
 // =========================== RAM MEMORY LAYOUT ===========================
 // random access memory : 387_420_489 ( 19_683^2 ) Trytes
@@ -167,6 +154,23 @@ pub const OpCodeMask = enum( u18 )
   }
 };
 
+
+// =========================== PROCESS FLAGS ( TRITS OF R_PFLG ) ===========================
+
+pub const PFlagTrit = enum( u4 )
+{
+  F_SN = 0, // what the last ALU/CMPR op returned                     ( -/0/+ ) sign flag
+  F_OV = 1, // if the last ALU op overflowed                          ( -/0/+ ) overflow flag ( add / sub )
+  F_FL = 2, // if the last ALU op under- or over-flowed               (  -/+  ) over/under flow flag   ( add / sub / mul, div )
+//F_XX = 3, // TBA
+  F_OR = 4, // whether the last opcond was false, skipped or true     ( -/0/+ ) opcond result flag
+  F_OM = 5, // how to modify the next opcond ( inv, skip )            ( -/0/+ ) opcond modifier flag
+  F_IS = 6, // when to auto-inter. ( on step, never, on jmp )         ( -/0/+ ) interupt-on-step flag
+  F_ST = 7, // if the process is quiting, running or pausing          ( -/0/+ ) process state flag   TODO : check if useless ?
+  F_IP = 8, // if the process can inter. itself( via SYSC, no, yes )  ( -/0/+ ) interupt permissions
+};
+
+
 // =========================== OPCODES ===========================
 
 // ========= NOMENCLATURE =========
@@ -201,7 +205,7 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
 
   // OP CONDITION | only execute opcode if :
   pub const C_ALW : u18 = 0b00_00_00_00_00_00_00_00_00; // always, unconditionally
-  pub const C_IFC : u18 = 0b00_00_00_00_00_00_00_00_01; // if F_CR or F_BR != 0
+  pub const C_IFC : u18 = 0b00_00_00_00_00_00_00_00_01; // if F_OV != 0
   pub const C_IFF : u18 = 0b00_00_00_00_00_00_00_00_10; // if F_FL != 0
 
   pub const C_IFZ : u18 = 0b00_00_00_00_00_00_00_01_00; // if F_SN != 0
@@ -337,7 +341,7 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
   // TRIT 1 OPS          2T ( 1 arg ) | in-place : A.var modified, result also => R_PREG
   // NOTE : TXXX indicates a tritwise op
 
-  TSUM  = 0b00_00_01_00_00_00_00_00_00, // sum all trits as ±1/0 integers => scalar tryte  ( trit reduce )
+  SUMT  = 0b00_00_01_00_00_00_00_00_00, // sum all trits as ±1/0 integers => scalar tryte  ( trit reduce )
   INC1  = 0b00_00_01_00_00_00_01_00_00, // A.var + 1
   DEC1  = 0b00_00_01_00_00_00_10_00_00, // A.var - 1
 
@@ -458,15 +462,15 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
   SUBV  = 0b00_00_10_00_00_00_01_00_00, // A.var - B.var
   MODV  = 0b00_00_10_00_00_00_10_00_00, // A.var mod B.var
 
-  ADDC  = 0b00_00_10_00_00_01_00_00_00, // ( A.var + B.var ) +   CARRY t rit
-  SUBB  = 0b00_00_10_00_00_01_01_00_00, // ( A.var - B.var ) - ( BORROW trit << ( TRYTE_SIZE - 1 ))
-  MODC  = 0b00_00_10_00_00_01_10_00_00, // ( A.var + CARRY  trit ) % B.var
+  ADDO  = 0b00_00_10_00_00_01_00_00_00, // ( A.var + B.var ) + F_OV
+  SUBO  = 0b00_00_10_00_00_01_01_00_00, // ( A.var - B.var ) + F_OV
+  MODO  = 0b00_00_10_00_00_01_10_00_00, // ( A.var + F_OV  ) % B.var    // NOTE : useless ?
 
   MULV  = 0b00_00_10_00_00_10_00_00_00, // A.var x B.var
   DIVV  = 0b00_00_10_00_00_10_01_00_00, // A.var / B.var                               ( round toward 0 )
   EXPV  = 0b00_00_10_00_00_10_10_00_00, // A.var ^ B.var                               ( general power, round toward 0 )
 
-  AVGV  = 0b00_00_10_00_01_00_00_00_00, // AVERAGE( A.var, B.var )                     ( round toward 0 )
+  AVGV  = 0b00_00_10_00_01_00_00_00_00, // AVERAGE( A.var, B.var )                     ( round toward 0 )                // NOTE : add an overflow version ?
   MINV  = 0b00_00_10_00_01_00_01_00_00, // MIN( A.var, B.var )
   MAXV  = 0b00_00_10_00_01_00_10_00_00, // MAX( A.var, B.var )
 
@@ -606,7 +610,7 @@ pub const opCodeMap = std.StaticStringMap( OpCode ).initComptime(
   .{ "STLD", .STLD },
 
 // TRITWISE OPERATIONS
-  .{ "TSUM", .TSUM },
+  .{ "SUMT", .SUMT },
   .{ "INC1", .INC1 },
   .{ "DEC1", .DEC1 },
   .{ "SHF3", .SHF3 },
@@ -662,9 +666,9 @@ pub const opCodeMap = std.StaticStringMap( OpCode ).initComptime(
   .{ "ADDV", .ADDV },
   .{ "SUBV", .SUBV },
   .{ "MODV", .MODV },
-  .{ "ADDC", .ADDC },
-  .{ "SUBB", .SUBB },
-  .{ "MODC", .MODC },
+  .{ "ADDO", .ADDO },
+  .{ "SUBO", .SUBO },
+  .{ "MODO", .MODO },
   .{ "MULV", .MULV },
   .{ "DIVV", .DIVV },
   .{ "EXPV", .EXPV },
