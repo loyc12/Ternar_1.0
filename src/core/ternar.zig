@@ -1,8 +1,6 @@
 const std = @import( "std" );
 const def = @import( "defs" );
 
-const ops = @import( "opfuncts.zig" );
-
 // =========================== DEFS IMPORTS ===========================
 
 // Typedefs
@@ -215,25 +213,25 @@ pub const Ternar = struct
   {
     // VALIDATING OPMODS
 
-    const IAS = ( op & OpCode._IAS_ );
-    const OAS = ( op & OpCode._OAS_ );
-    const EXC = ( op & OpCode._EXC_ );
+    const IAS = def.getOpComp( op, ._IAS_ );
+    const OAS = def.getOpComp( op, ._OAS_ );
+    const EXC = def.getOpComp( op, ._EXC_ );
 
     if( !switch( IAS )
     {
-      OpCode.I_VL => true,
-      OpCode.I_AD => false,
-      OpCode.I_RA => false,
-      else        => false,
+      OpCode.I_VAL => true,
+      OpCode.I_ADR => false,
+      OpCode.I_RAM => false,
+      else         => false,
     })
     { def.log( .ERROR, 0, @src(), "INPUT SPACE {s} not supported", .{ tryteToStr( IAS )}); return false; }
 
     if( !switch( OAS )
     {
-      OpCode.O_VL => true,
-      OpCode.O_AD => false,
-      OpCode.O_RA => false,
-      else        => false,
+      OpCode.O_VAL => true,
+      OpCode.O_ADR => false,
+      OpCode.O_RAM => false,
+      else         => false,
     })
     { def.log( .ERROR, 0, @src(), "OUTPUT SPACE {s} not supported", .{ tryteToStr( OAS )}); return false; }
 
@@ -273,32 +271,38 @@ pub const Ternar = struct
 
     const expectedOpLen = argC + 1;
 
-    const OPN = ( op & OpCode._OPN_ );
-    const opLen = OpCode.getOpLen( @enumFromInt( OPN ));
+    const opLen = def.getOpLen( op );
 
-    if( expectedOpLen != opLen  )
+    if( opLen == null )
     {
-      def.log( .ERROR, 0, @src(), "found {d} args for a {d} args op", .{ expectedOpLen - 1, opLen - 1 });
+      def.qlog( .ERROR, 0, @src(), "failed to obtain opLen" );
+      return false;
+    }
+
+    if( expectedOpLen != opLen.?  )
+    {
+      def.log( .ERROR, 0, @src(), "found {d} args for a {d} args op", .{ expectedOpLen - 1, opLen.? - 1 });
       return false;
     }
 
     // PARSING OPNAMES
 
-    switch( OPN )
+    const opName : OpCode = @enumFromInt( def.getOpComp( op, ._OPN_ ));
+
+    switch( opName )
     {
-    // SYSTEM OPS      2T ( 1 arg ) |
+      OpCode.NOPE => { def.opList.NOPE( self, A ); },
 
-      @intFromEnum( OpCode.NOPE ) => { ops.NOPE( self, A ); },
-    //@intFromEnum( OpCode.INFO ) => { ops.INFO( self, A ); },
-    //@intFromEnum( OpCode.PRNT ) => { ops.PRNT( self, A ); },
-
-
-      else => return false,
+      else =>
+      {
+        def.qlog( .ERROR, 0, @src(), "unrecognized opName" );
+        return false;
+      },
     }
 
     // STEPPING TO NEXT OP
 
-    self.stepProcess( opLen );
+    self.stepProcess( opLen.? );
 
     return true;
   }

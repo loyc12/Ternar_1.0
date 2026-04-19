@@ -1,14 +1,58 @@
 const std = @import( "std" );
 const def = @import( "defs" );
 
+const Tryte = def.Tryte;
+
+
+
+// ========= OP FUNCTIONS =========
+
+/// Only accepts OpCode's SUBMASKS
+pub inline fn getOpComp( op : Tryte, mask : OpCodeMask ) u18
+{
+  return ( op & @intFromEnum( mask ));
+}
+
+/// Only accepts OpCode's SUBMASKS
+pub inline fn getOpCompShifted( op : Tryte, mask : OpCodeMask ) u18
+{
+  const maskOffset = mask.getRightBitOffset();
+  const opComp     = getOpComp( op, mask );
+
+  return opComp >> maskOffset;
+}
+
+pub inline fn getOpLen( op : Tryte ) ?u18
+{
+  const opType = getOpCompShifted( op, ._OPT_ ); // Always valid
+
+  switch( opType )
+  {
+    0b00_00 => return( 1 + 1 ), // SYSTEM
+    0b00_01 => return( 1 + 1 ), // PROCESS
+    0b00_10 => return( 1 + 2 ), // MOVE
+    0b01_00 => return( 1 + 1 ), // TRIT 1
+    0b01_01 => return( 1 + 2 ), // TRIT 2
+    0b01_10 => return( 1 + 3 ), // TRIT 3
+    0b10_00 => return( 1 + 3 ), // ALU  1
+    0b10_01 => return( 1 + 4 ), // ALU  2
+    0b10_10 => return( 1 + 3 ), // VECTOR
+    else    =>
+    {
+      def.qlog( .ERROR, 0, @src(), "unrecognized opType" );
+      return null;
+    }
+  }
+}
+
 // =========================== PROCESS FLAGS ( TRITS OF R_PFLG ) ===========================
 
 pub const PFlagTrit = enum( u4 )
 {
   F_SN = 0, // what the last ALU/CMPR op returned                     ( -/0/+ ) sign flag
-  F_CR = 1, // if the last ALU op had a carry                         (  -/+  ) carry flag           ( add )
-  F_BR = 2, // if the last ALU op had a borrow                        (  -/+  ) borrow flag          ( sub )
-  F_FL = 3, // if the last ALU op under- or over-flowed               (  -/+  ) over/under flow flag ( add, sub. mul )
+  F_CR = 1, // if the last ALU op had a carry                         (  -/+  ) carry flag             ( add )
+  F_BR = 2, // if the last ALU op had a borrow                        (  -/+  ) borrow flag            ( sub )
+  F_FL = 3, // if the last ALU op under- or over-flowed               (  -/+  ) over/under flow flag   ( add, sub, mul )
   F_OR = 4, // wether the last opcond was false, skipped or true      ( -/0/+ ) opcond result flag
   F_OM = 5, // how to modify the next opcond ( inv, skip )            (  -/+  ) opcond modifier flag
   F_IS = 6, // when to auto-inter. ( on step, never, on jmp )         ( -/0/+ ) interupt-on-step flag
@@ -76,6 +120,53 @@ pub const PRegTryte = enum( u4 ) // TODO : add more work regs ?
 // ?-? => video   memory   : 3x max resolution
 
 
+// =========================== OPCODES SUBMASKS ===========================
+// NOTE : masks are always in _SCREAMING_SNAKECASE_
+
+pub const OpCodeMask = enum( u18 )
+{
+  _IAS_ = 0b11_00_00_00_00_00_00_00_00, // input  adress space
+  _OAS_ = 0b00_11_00_00_00_00_00_00_00, // output adress space
+  _EXC_ = 0b00_00_00_00_00_00_00_11_11, // execution conditions
+  _OPN_ = 0b00_00_11_11_11_11_11_00_00, // operation names ( types & codes )
+  _OPT_ = 0b00_00_11_11_00_00_00_00_00, // operation types
+  _OPC_ = 0b00_00_00_00_11_11_11_00_00, // operation codes
+
+  pub fn getRightBitOffset( self : OpCodeMask ) u5
+  {
+    return def.BITS_PER_TRIT * self.getRightTritOffset();
+  }
+  pub fn getRightTritOffset( self : OpCodeMask ) u5
+  {
+    return switch( self )
+    {
+      ._IAS_ => 8,
+      ._OAS_ => 7,
+      ._EXC_ => 0,
+      ._OPN_ => 2,
+      ._OPT_ => 5,
+      ._OPC_ => 2,
+    };
+  }
+
+  pub fn getLeftBitOffset( self : OpCodeMask ) u5
+  {
+    return def.BITS_PER_TRIT * self.getLeftTritOffset();
+  }
+  pub fn getLeftTritOffset( self : OpCodeMask ) u5
+  {
+    return switch( self )
+    {
+      ._IAS_ => 0,
+      ._OAS_ => 1,
+      ._EXC_ => 7,
+      ._OPN_ => 2,
+      ._OPT_ => 2,
+      ._OPC_ => 4,
+    };
+  }
+};
+
 // =========================== OPCODES ===========================
 
 // ========= NOMENCLATURE =========
@@ -96,29 +187,17 @@ pub const PRegTryte = enum( u4 ) // TODO : add more work regs ?
 
 pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
 {
-
-  // OPCODE SUBMASKS ( always in _SCREAMING_SNAKECASE_ )
-  // NOTE : Masks are the only ones allowed to use 0b11, as it is an invalid trit otherwise
-
-  pub const _IAS_ : u18 = 0b11_00_00_00_00_00_00_00_00; // input  adress space
-  pub const _OAS_ : u18 = 0b00_11_00_00_00_00_00_00_00; // output adress space
-  pub const _EXC_ : u18 = 0b00_00_00_00_00_00_00_11_11; // execution conditions
-
-  pub const _OPN_ : u18 = 0b00_00_11_11_11_11_11_00_00; // operation names ( types & codes )
-  pub const _OPT_ : u18 = 0b00_00_11_11_00_00_00_00_00; // operation types
-  pub const _OPC_ : u18 = 0b00_00_00_00_11_11_11_00_00; // operation codes
-
   // ========= OPERATION MODIFIERS =========
 
   // INPUT SPACE  |
-  pub const I_VL  : u18 = 0b00_00_00_00_00_00_00_00_00; // raw values   ( in-place ops stored in prog. as static val. )
-  pub const I_AD  : u18 = 0b01_00_00_00_00_00_00_00_00; // RAM adresses ( upper half of the address in R_MSEG )
-  pub const I_RA  : u18 = 0b10_00_00_00_00_00_00_00_00; // RAM adresses ( relative to current R_PADR.var, signed )
+  pub const I_VAL : u18 = 0b00_00_00_00_00_00_00_00_00; // raw values   ( in-place ops stored in prog. as static val. )
+  pub const I_ADR : u18 = 0b01_00_00_00_00_00_00_00_00; // RAM adresses ( upper half of the address in R_MSEG )
+  pub const I_RAM : u18 = 0b10_00_00_00_00_00_00_00_00; // RAM adresses ( relative to current R_PADR.var, signed )
 
   // OUTPUT SPACE | always outputs to R_PREG as well
-  pub const O_VL  : u18 = 0b00_00_00_00_00_00_00_00_00; // raw values   ( in-place ops stored in prog. as static val. )
-  pub const O_AD  : u18 = 0b00_01_00_00_00_00_00_00_00; // RAM adresses ( upper half of the address in R_MSEG )
-  pub const O_RA  : u18 = 0b00_10_00_00_00_00_00_00_00; // RAM adresses ( relative to current R_PADR.var, signed )
+  pub const O_VAL : u18 = 0b00_00_00_00_00_00_00_00_00; // raw values   ( in-place ops stored in prog. as static val. )
+  pub const O_ADR : u18 = 0b00_01_00_00_00_00_00_00_00; // RAM adresses ( upper half of the address in R_MSEG )
+  pub const O_RAM : u18 = 0b00_10_00_00_00_00_00_00_00; // RAM adresses ( relative to current R_PADR.var, signed )
 
   // OP CONDITION | only execute opcode if :
   pub const C_ALW : u18 = 0b00_00_00_00_00_00_00_00_00; // always, unconditionally
@@ -131,7 +210,7 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
 
   pub const C_INV : u18 = 0b00_00_00_00_00_00_00_10_00; // set F_SK to - to invert the next condition check's result
   pub const C_SKP : u18 = 0b00_00_00_00_00_00_00_10_01; // set F_SK to + to avoid the next condition check ( acts like C_ALW  )
-//C_XXX = 0b00_00_00_00_00_00_00_10_10,
+//pub const C_XXX : u18 = 0b00_00_00_00_00_00_00_10_10;
 
 
   // ========= OPERATION NAMES ( TYPE & CODE ) =========
@@ -165,6 +244,10 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
 //XXXX  = 0b00_00_00_00_01_10_00_00_00,
 //XXXX  = 0b00_00_00_00_01_10_01_00_00,
 //XXXX  = 0b00_00_00_00_01_10_10_00_00,
+
+//XXXX  = 0b00_00_00_00_10_00_00_00_00,
+//XXXX  = 0b00_00_00_00_10_00_01_00_00,
+//XXXX  = 0b00_00_00_00_10_00_10_00_00,
 
   // sys macros                       | NOTE : *A treated as optional hint ( exit code, yield reason, etc. )
   CONT  = 0b00_00_00_00_10_01_00_00_00, // resume process     => F_ST = 0
@@ -251,154 +334,155 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
 //XXXX  = 0b00_00_00_10_10_10_01_00_00,
 //XXXX  = 0b00_00_00_10_10_10_10_00_00,
 
-  // VECTOR OPS         4T ( 3 args ) |
+  // TRIT 1 OPS          2T ( 1 arg ) | in-place : A.var modified, result also => R_PREG
+  // NOTE : TXXX indicates a tritwise op
 
-  VSET  = 0b00_00_01_00_00_00_00_00_00, // SETV( A,   B++ ) C.var times
-  VCPY  = 0b00_00_01_00_00_00_01_00_00, // COPY( A++, B++ ) C.var times
-  VSWP  = 0b00_00_01_00_00_00_10_00_00, // SWAP( A++, B++ ) C.var times
+  TSUM  = 0b00_00_01_00_00_00_00_00_00, // sum all trits as ±1/0 integers => scalar tryte  ( trit reduce )
+  INC1  = 0b00_00_01_00_00_00_01_00_00, // A.var + 1
+  DEC1  = 0b00_00_01_00_00_00_10_00_00, // A.var - 1
 
-  VPSH  = 0b00_00_01_00_00_01_00_00_00, // push C.var trytes from A.adr onto stack at B.stk
-  VPOP  = 0b00_00_01_00_00_01_01_00_00, // pop  C.var trytes from B.stk => starting at A.adr
-  VCLR  = 0b00_00_01_00_00_01_10_00_00, // zero C.var trytes in stack B.stk from A.adr
+  SHF3  = 0b00_00_01_00_00_01_00_00_00, // shift all trits toward MST by 3     ( one digit group, equiv. x27 )
+  SHFU  = 0b00_00_01_00_00_01_01_00_00, // shift all trits toward MST by 1     ( equiv. x3 )
+  SHFD  = 0b00_00_01_00_00_01_10_00_00, // shift all trits toward LST by 1     ( equiv. /3, round toward 0 )
 
-//XXXX  = 0b00_00_01_00_00_10_00_00_00,
-//XXXX  = 0b00_00_01_00_00_10_01_00_00,
-//XXXX  = 0b00_00_01_00_00_10_10_00_00,
+  ROT3  = 0b00_00_01_00_00_10_00_00_00, // rotate all trits toward MST by 3    ( one digit group, wraps )
+  ROTU  = 0b00_00_01_00_00_10_01_00_00, // rotate all trits toward MST by 1    ( wraps )
+  ROTD  = 0b00_00_01_00_00_10_10_00_00, // rotate all trits toward LST by 1    ( wraps )
 
-//XXXX  = 0b00_00_01_00_01_00_00_00_00,
-//XXXX  = 0b00_00_01_00_01_00_01_00_00,
-//XXXX  = 0b00_00_01_00_01_00_10_00_00,
+  FLIP  = 0b00_00_01_00_01_00_00_00_00, // mirror tryte : trit[0]<=>trit[8], trit[1]<=>trit[7], ...
+  TPTZ  = 0b00_00_01_00_01_00_01_00_00, // set all + trits to 0                ( positive => zero )
+  TNTZ  = 0b00_00_01_00_01_00_10_00_00, // set all - trits to 0                ( negative => zero )
 
-//XXXX  = 0b00_00_01_00_01_01_00_00_00,
-//XXXX  = 0b00_00_01_00_01_01_01_00_00,
-//XXXX  = 0b00_00_01_00_01_01_10_00_00,
+  TABS  = 0b00_00_01_00_01_01_00_00_00, // invert sign of every trit           ( -A.var )
+  TABP  = 0b00_00_01_00_01_01_01_00_00, // convert all + trits to -            ( positive => negative )
+  TABN  = 0b00_00_01_00_01_01_10_00_00, // convert all - trits to +            ( negative => positive )
 
-//XXXX  = 0b00_00_01_00_01_10_00_00_00,
-//XXXX  = 0b00_00_01_00_01_10_01_00_00,
-//XXXX  = 0b00_00_01_00_01_10_10_00_00,
+  TEQZ  = 0b00_00_01_00_01_10_00_00_00, // per-trit: 0 => +, +/- => -          ( is-zero mask )
+  TZTP  = 0b00_00_01_00_01_10_01_00_00, // set all 0 trits to +                ( zero => positive )
+  TZTN  = 0b00_00_01_00_01_10_10_00_00, // set all 0 trits to -                ( zero => negative )
 
 //XXXX  = 0b00_00_01_00_10_00_00_00_00,
-//XXXX  = 0b00_00_01_00_10_00_01_00_00,
-//XXXX  = 0b00_00_01_00_10_00_10_00_00,
+  TCYU  = 0b00_00_01_00_10_00_01_00_00, // cycle each trit upward              ( ) - => 0 => + => - )
+  TCYD  = 0b00_00_01_00_10_00_10_00_00, // cycle each trit downward            ( ) + => 0 => - => + )
 
 //XXXX  = 0b00_00_01_00_10_01_00_00_00,
-//XXXX  = 0b00_00_01_00_10_01_01_00_00,
-//XXXX  = 0b00_00_01_00_10_01_10_00_00,
+  TDET  = 0b00_00_01_00_10_01_01_00_00, // determinacy :      +/- => +, 0 => - ( is-nonzero mask )
+  TNDT  = 0b00_00_01_00_10_01_10_00_00, // inv. determinacy : +/- => -, 0 => +
 
-//XXXX  = 0b00_00_01_00_10_10_00_00_00,
-//XXXX  = 0b00_00_01_00_10_10_01_00_00,
-//XXXX  = 0b00_00_01_00_10_10_10_00_00,
-
-  // TRIT 1 OPS          2T ( 1 arg ) | in-place : A.var modified, result also => R_PREG
-
-  TSUM  = 0b00_00_01_01_00_00_00_00_00, // sum all trits as ±1/0 integers => scalar tryte  ( trit reduce )
-  INC1  = 0b00_00_01_01_00_00_01_00_00, // A.var + 1
-  DEC1  = 0b00_00_01_01_00_00_10_00_00, // A.var - 1
-
-  SHF3  = 0b00_00_01_01_00_01_00_00_00, // shift all trits toward MST by 3     ( one digit group, equiv. x27 )
-  SHFU  = 0b00_00_01_01_00_01_01_00_00, // shift all trits toward MST by 1     ( equiv. x3 )
-  SHFD  = 0b00_00_01_01_00_01_10_00_00, // shift all trits toward LST by 1     ( equiv. /3, round toward 0 )
-
-  ROT3  = 0b00_00_01_01_00_10_00_00_00, // rotate all trits toward MST by 3    ( one digit group, wraps )
-  ROTU  = 0b00_00_01_01_00_10_01_00_00, // rotate all trits toward MST by 1    ( wraps )
-  ROTD  = 0b00_00_01_01_00_10_10_00_00, // rotate all trits toward LST by 1    ( wraps )
-
-  FLIP  = 0b00_00_01_01_01_00_00_00_00, // mirror tryte : trit[0]<=>trit[8], trit[1]<=>trit[7], ...
-  TPTZ  = 0b00_00_01_01_01_00_01_00_00, // set all + trits to 0                ( positive => zero )
-  TNTZ  = 0b00_00_01_01_01_00_10_00_00, // set all - trits to 0                ( negative => zero )
-
-  TABS  = 0b00_00_01_01_01_01_00_00_00, // invert sign of every trit           ( -A.var )
-  TABP  = 0b00_00_01_01_01_01_01_00_00, // convert all + trits to -            ( positive => negative )
-  TABN  = 0b00_00_01_01_01_01_10_00_00, // convert all - trits to +            ( negative => positive )
-
-  TEQZ  = 0b00_00_01_01_01_10_00_00_00, // per-trit: 0 => +, +/- => -          ( is-zero mask )
-  TZTP  = 0b00_00_01_01_01_10_01_00_00, // set all 0 trits to +                ( zero => positive )
-  TZTN  = 0b00_00_01_01_01_10_10_00_00, // set all 0 trits to -                ( zero => negative )
-
-//XXXX  = 0b00_00_01_01_10_00_00_00_00,
-  TCYU  = 0b00_00_01_01_10_00_01_00_00, // cycle each trit upward              ( ) - => 0 => + => - )
-  TCYD  = 0b00_00_01_01_10_00_10_00_00, // cycle each trit downward            ( ) + => 0 => - => + )
-
-//XXXX  = 0b00_00_01_01_10_01_00_00_00,
-  TDET  = 0b00_00_01_01_10_01_01_00_00, // determinacy :      +/- => +, 0 => - ( is-nonzero mask )
-  TNDT  = 0b00_00_01_01_10_01_10_00_00, // inv. determinacy : +/- => -, 0 => +
-
-  CMPZ  = 0b00_00_01_01_10_10_00_00_00, // compare A.var to 0 => flags + R_PREG  ( A.var unchanged )
-  ABSV  = 0b00_00_01_01_10_10_01_00_00, // | A.var | as whole integer
-  SGNV  = 0b00_00_01_01_10_10_10_00_00, // SIGN( A.var ) => -/0/+ as tryte
+  CMPZ  = 0b00_00_01_00_10_10_00_00_00, // compare A.var to 0 => flags + R_PREG  ( A.var unchanged )
+  ABSV  = 0b00_00_01_00_10_10_01_00_00, // | A.var | as whole integer
+  SGNV  = 0b00_00_01_00_10_10_10_00_00, // SIGN( A.var ) => -/0/+ as tryte
 
 
   // TRIT 2 OPS         3T ( 2 args ) | read-only : A / B => R_PREG only
   // truth table layout : left table = this op,  right table = its NOT complement
 
-//XXXX  = 0b00_00_01_10_00_00_00_00_00, //   - - -   + + +
-  TMIN  = 0b00_00_01_10_00_00_01_00_00, //   - 0 0   + 0 0  // ( NOT ) MINIMUM   ( AND = MIN )
-  TNMN  = 0b00_00_01_10_00_00_10_00_00, //   - 0 +   + 0 -
+//XXXX  = 0b00_00_01_01_00_00_00_00_00, //   - - -   + + +
+  TMIN  = 0b00_00_01_01_00_00_01_00_00, //   - 0 0   + 0 0  // ( NOT ) MINIMUM   ( AND = MIN )
+  TNMN  = 0b00_00_01_01_00_00_10_00_00, //   - 0 +   + 0 -
 
-//XXXX  = 0b00_00_01_10_00_01_00_00_00, //   - 0 +   + 0 -
-  TMAX  = 0b00_00_01_10_00_01_01_00_00, //   0 0 +   0 0 -  // ( NOT ) MAXIMUM   ( OR = MAX )
-  TNMX  = 0b00_00_01_10_00_01_10_00_00, //   + + +   - - -
+//XXXX  = 0b00_00_01_01_00_01_00_00_00, //   - 0 +   + 0 -
+  TMAX  = 0b00_00_01_01_00_01_01_00_00, //   0 0 +   0 0 -  // ( NOT ) MAXIMUM   ( OR = MAX )
+  TNMX  = 0b00_00_01_01_00_01_10_00_00, //   + + +   - - -
 
-//XXXX  = 0b00_00_01_10_00_10_00_00_00, //   + 0 -   - 0 +
-  TAGR  = 0b00_00_01_10_00_10_01_00_00, //   0 0 0   0 0 0  // ( DIS ) AGREEMENT  ( AGR = SIGN( A x B ) )
-  TDIS  = 0b00_00_01_10_00_10_10_00_00, //   - 0 +   + 0 -
+//XXXX  = 0b00_00_01_01_00_10_00_00_00, //   + 0 -   - 0 +
+  TAGR  = 0b00_00_01_01_00_10_01_00_00, //   0 0 0   0 0 0  // ( DIS ) AGREEMENT  ( AGR = SIGN( A x B ) )
+  TDIS  = 0b00_00_01_01_00_10_10_00_00, //   - 0 +   + 0 -
 
-//XXXX  = 0b00_00_01_10_01_00_00_00_00, //   - - 0   + + 0
-  TMAJ  = 0b00_00_01_10_01_00_01_00_00, //   - 0 +   + 0 -  // ( NOT ) MAJORITY
-  TNMJ  = 0b00_00_01_10_01_00_10_00_00, //   0 + +   0 - -
+//XXXX  = 0b00_00_01_01_01_00_00_00_00, //   - - 0   + + 0
+  TMAJ  = 0b00_00_01_01_01_00_01_00_00, //   - 0 +   + 0 -  // ( NOT ) MAJORITY
+  TNMJ  = 0b00_00_01_01_01_00_10_00_00, //   0 + +   0 - -
 
-//XXXX  = 0b00_00_01_10_01_01_00_00_00, //   - 0 0   + 0 0
-  TCON  = 0b00_00_01_10_01_01_01_00_00, //   0 0 0   0 0 0  // ( INV ) CONSENSUS  ( TCON => CARRY TRIT )
-  TNCN  = 0b00_00_01_10_01_01_10_00_00, //   0 0 +   0 0 -
+//XXXX  = 0b00_00_01_01_01_01_00_00_00, //   - 0 0   + 0 0
+  TCON  = 0b00_00_01_01_01_01_01_00_00, //   0 0 0   0 0 0  // ( INV ) CONSENSUS  ( TCON => CARRY TRIT )
+  TNCN  = 0b00_00_01_01_01_01_10_00_00, //   0 0 +   0 0 -
 
-//XXXX  = 0b00_00_01_10_01_10_00_00_00, //   + - -   - + +
-  TEQL  = 0b00_00_01_10_01_10_01_00_00, //   - + -   + - +  // ( NEQ ) EQUALITY
-  TNEQ  = 0b00_00_01_10_01_10_10_00_00, //   - - +   + + -
+//XXXX  = 0b00_00_01_01_01_10_00_00_00, //   + - -   - + +
+  TEQL  = 0b00_00_01_01_01_10_01_00_00, //   - + -   + - +  // ( NEQ ) EQUALITY
+  TNEQ  = 0b00_00_01_01_01_10_10_00_00, //   - - +   + + -
 
-//XXXX  = 0b00_00_01_10_10_00_00_00_00, //   - 0 +   + + +
-  TBPS  = 0b00_00_01_10_10_00_01_00_00, //   0 + +   + + 0  // ( BNG ) BIASED POSITIVE  ( SIGN( A + B + 1 ) )
-  TBNG  = 0b00_00_01_10_10_00_10_00_00, //   + + +   + 0 -
+//XXXX  = 0b00_00_01_01_10_00_00_00_00, //   - 0 +   + + +
+  TBPS  = 0b00_00_01_01_10_00_01_00_00, //   0 + +   + + 0  // ( BNG ) BIASED POSITIVE  ( SIGN( A + B + 1 ) )
+  TBNG  = 0b00_00_01_01_10_00_10_00_00, //   + + +   + 0 -
 
-//XXXX  = 0b00_00_01_10_10_01_00_00_00, //   - 0 -   + 0 +
-  TJZR  = 0b00_00_01_10_10_01_01_00_00, //   0 + 0   0 - 0  // ( NJZ ) JOINTLY ZERO  ( SIGN( 1 - |A| - |B| ) )
-  TNJZ  = 0b00_00_01_10_10_01_10_00_00, //   - 0 -   + 0 +
+//XXXX  = 0b00_00_01_01_10_01_00_00_00, //   - 0 -   + 0 +
+  TJZR  = 0b00_00_01_01_10_01_01_00_00, //   0 + 0   0 - 0  // ( NJZ ) JOINTLY ZERO  ( SIGN( 1 - |A| - |B| ) )
+  TNJZ  = 0b00_00_01_01_10_01_10_00_00, //   - 0 -   + 0 +
+
+//XXXX  = 0b00_00_01_01_10_10_00_00_00,
+//XXXX  = 0b00_00_01_01_10_10_01_00_00,
+//XXXX  = 0b00_00_01_01_10_10_10_00_00,
+
+  // TRIT 3 OPS         4T ( 3 args ) | A / B => flags + R_PREG,  *C = extra dest
+  // MSK* : trytewise masking, A masked by B  => C.adr + R_PREG
+
+  CMPR  = 0b00_00_01_10_00_00_00_00_00, // compare A.var to         B.var  => flags, SIGN => R_PREG, *C.adr
+  CMPN  = 0b00_00_01_10_00_00_01_00_00, // compare A.var to  INVR ( B.var) => flags, SIGN => R_PREG, *C.adr
+  CMPF  = 0b00_00_01_10_00_00_10_00_00, // compare A.var to  FLIP ( B.var) => flags, SIGN => R_PREG, *C.adr
+
+//XXXX  = 0b00_00_01_10_00_01_00_00_00,
+//XXXX  = 0b00_00_01_10_00_01_01_00_00,
+//XXXX  = 0b00_00_01_10_00_01_10_00_00,
+
+//XXXX  = 0b00_00_01_10_00_10_00_00_00,
+//XXXX  = 0b00_00_01_10_00_10_01_00_00,
+//XXXX  = 0b00_00_01_10_00_10_10_00_00,
+
+  MSKZ  = 0b00_00_01_10_01_00_00_00_00, // copy A.var, zero-out trits where B != 0  => C.adr, R_PREG
+  MSKP  = 0b00_00_01_10_01_00_01_00_00, // copy A.var, zero-out trits where B != +  => C.adr, R_PREG
+  MSKN  = 0b00_00_01_10_01_00_10_00_00, // copy A.var, zero-out trits where B != -  => C.adr, R_PREG
+
+//XXXX  = 0b00_00_01_10_01_01_00_00_00,
+//XXXX  = 0b00_00_01_10_01_01_01_00_00,
+//XXXX  = 0b00_00_01_10_01_01_10_00_00,
+
+//XXXX  = 0b00_00_01_10_01_10_00_00_00,
+//XXXX  = 0b00_00_01_10_01_10_01_00_00,
+//XXXX  = 0b00_00_01_10_01_10_10_00_00,
+
+  SHFV  = 0b00_00_01_10_10_00_00_00_00, // shift  A.var by B.var positions ( signed: + = toward MST ) => C.adr, R_PREG
+  ROTV  = 0b00_00_01_10_10_00_01_00_00, // rotate A.var by B.var positions ( signed: + = toward MST ) => C.adr, R_PREG
+//XXXX  = 0b00_00_01_10_10_00_10_00_00,
+
+//XXXX  = 0b00_00_01_10_10_01_00_00_00,
+//XXXX  = 0b00_00_01_10_10_01_01_00_00,
+//XXXX  = 0b00_00_01_10_10_01_10_00_00,
 
 //XXXX  = 0b00_00_01_10_10_10_00_00_00,
 //XXXX  = 0b00_00_01_10_10_10_01_00_00,
 //XXXX  = 0b00_00_01_10_10_10_10_00_00,
 
-  // TRIT 3 OPS         4T ( 3 args ) | A / B => flags + R_PREG,  *C = extra dest
-  // MSK* : trytewise masking, A masked by B  => C.adr + R_PREG
+  // ALU 1 OPS          4T ( 3 args ) | A / B => C.adr + R_PREG
 
-  CMPR  = 0b00_00_10_00_00_00_00_00_00, // compare A.var to         B.var  => flags, SIGN => R_PREG, *C.adr
-  CMPN  = 0b00_00_10_00_00_00_01_00_00, // compare A.var to  INVR ( B.var) => flags, SIGN => R_PREG, *C.adr
-  CMPF  = 0b00_00_10_00_00_00_10_00_00, // compare A.var to  FLIP ( B.var) => flags, SIGN => R_PREG, *C.adr
+  ADDV  = 0b00_00_10_00_00_00_00_00_00, // A.var + B.var
+  SUBV  = 0b00_00_10_00_00_00_01_00_00, // A.var - B.var
+  MODV  = 0b00_00_10_00_00_00_10_00_00, // A.var mod B.var
 
-//XXXX  = 0b00_00_10_00_00_01_00_00_00,
-//XXXX  = 0b00_00_10_00_00_01_01_00_00,
-//XXXX  = 0b00_00_10_00_00_01_10_00_00,
+  ADDC  = 0b00_00_10_00_00_01_00_00_00, // ( A.var + B.var ) +   CARRY t rit
+  SUBB  = 0b00_00_10_00_00_01_01_00_00, // ( A.var - B.var ) - ( BORROW trit << ( TRYTE_SIZE - 1 ))
+  MODC  = 0b00_00_10_00_00_01_10_00_00, // ( A.var + CARRY  trit ) % B.var
 
-//XXXX  = 0b00_00_10_00_00_10_00_00_00,
-//XXXX  = 0b00_00_10_00_00_10_01_00_00,
-//XXXX  = 0b00_00_10_00_00_10_10_00_00,
+  MULV  = 0b00_00_10_00_00_10_00_00_00, // A.var x B.var
+  DIVV  = 0b00_00_10_00_00_10_01_00_00, // A.var / B.var                               ( round toward 0 )
+  EXPV  = 0b00_00_10_00_00_10_10_00_00, // A.var ^ B.var                               ( general power, round toward 0 )
 
-  MSKZ  = 0b00_00_10_00_01_00_00_00_00, // copy A.var, zero-out trits where B != 0  => C.adr, R_PREG
-  MSKP  = 0b00_00_10_00_01_00_01_00_00, // copy A.var, zero-out trits where B != +  => C.adr, R_PREG
-  MSKN  = 0b00_00_10_00_01_00_10_00_00, // copy A.var, zero-out trits where B != -  => C.adr, R_PREG
+  AVGV  = 0b00_00_10_00_01_00_00_00_00, // AVERAGE( A.var, B.var )                     ( round toward 0 )
+  MINV  = 0b00_00_10_00_01_00_01_00_00, // MIN( A.var, B.var )
+  MAXV  = 0b00_00_10_00_01_00_10_00_00, // MAX( A.var, B.var )
 
-//XXXX  = 0b00_00_10_00_01_01_00_00_00,
-//XXXX  = 0b00_00_10_00_01_01_01_00_00,
-//XXXX  = 0b00_00_10_00_01_01_10_00_00,
+  EXP2  = 0b00_00_10_00_01_01_00_00_00, // ( A.var + *B.var ) ^ 2                      ( square )
+  SRT2  = 0b00_00_10_00_01_01_01_00_00, // ( A.var + *B.var ) ^ 1/2                    ( square root, round toward 0 )
+  MOD2  = 0b00_00_10_00_01_01_10_00_00, // ( A.var + *B.var ) mod 2                                                      // NOTE : overkill ?
 
-//XXXX  = 0b00_00_10_00_01_10_00_00_00,
-//XXXX  = 0b00_00_10_00_01_10_01_00_00,
-//XXXX  = 0b00_00_10_00_01_10_10_00_00,
+  EXP3  = 0b00_00_10_00_01_10_00_00_00, // ( A.var + *B.var ) ^ 3                      ( cube )
+  CRT3  = 0b00_00_10_00_01_10_01_00_00, // ( A.var + *B.var ) ^ 1/3                    ( cube root, round toward 0 )
+  MOD3  = 0b00_00_10_00_01_10_10_00_00, // ( A.var + *B.var ) mod 3
 
-  SHFV  = 0b00_00_10_00_10_00_00_00_00, // shift  A.var by B.var positions ( signed: + = toward MST ) => C.adr, R_PREG
-  ROTV  = 0b00_00_10_00_10_00_01_00_00, // rotate A.var by B.var positions ( signed: + = toward MST ) => C.adr, R_PREG
-//XXXX  = 0b00_00_10_00_10_00_10_00_00,
+  LOGV  = 0b00_00_10_00_10_00_00_00_00, // log_B( A.var )                              ( general log, round toward 0 )   // NOTE : overkill ?
+  RNDV  = 0b00_00_10_00_10_00_01_00_00, // round A.var to nearest multiple of B.var    ( round toward 0 )
+  ROOT  = 0b00_00_10_00_10_00_10_00_00, // A.var ^ ( 1 / B.var )                       ( Nth root, round toward 0 )      // NOTE : overkill ?
 
-//XXXX  = 0b00_00_10_00_10_01_00_00_00,
+  DIFF  = 0b00_00_10_00_10_01_00_00_00, // | A.var - B.var |                           ( absolute difference )
 //XXXX  = 0b00_00_10_00_10_01_01_00_00,
 //XXXX  = 0b00_00_10_00_10_01_10_00_00,
 
@@ -406,37 +490,37 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
 //XXXX  = 0b00_00_10_00_10_10_01_00_00,
 //XXXX  = 0b00_00_10_00_10_10_10_00_00,
 
-  // ALU 1 OPS          4T ( 3 args ) | A / B => C.adr + R_PREG
+  // ALU 2 OPS          5T ( 4 args ) | A / B / C => D.adr + R_PREG
 
-  ADDV  = 0b00_00_10_01_00_00_00_00_00, // A.var + B.var
-  SUBV  = 0b00_00_10_01_00_00_01_00_00, // A.var - B.var
-  MODV  = 0b00_00_10_01_00_00_10_00_00, // A.var mod B.var
+  MEDI  = 0b00_00_10_01_00_00_00_00_00, // MEDIAN( A.var, B.var, C.var )
+  MADD  = 0b00_00_10_01_00_00_01_00_00, // ( A.var x B.var ) + C.var
+  AMUL  = 0b00_00_10_01_00_00_10_00_00, // ( A.var + B.var ) x C.var
 
-  ADDC  = 0b00_00_10_01_00_01_00_00_00, // ( A.var + B.var ) +   CARRY t rit
-  SUBB  = 0b00_00_10_01_00_01_01_00_00, // ( A.var - B.var ) - ( BORROW trit << ( TRYTE_SIZE - 1 ))
-  MODC  = 0b00_00_10_01_00_01_10_00_00, // ( A.var + B.var   +   CARRY  trit ) % 2
+  AVG3  = 0b00_00_10_01_00_01_00_00_00, // AVERAGE( A.var, B.var, C.var )               ( round toward 0 )
+  MIN3  = 0b00_00_10_01_00_01_01_00_00, // MIN( A.var, B.var, C.var )
+  MAX3  = 0b00_00_10_01_00_01_10_00_00, // MAX( A.var, B.var, C.var )
 
-  MULV  = 0b00_00_10_01_00_10_00_00_00, // A.var x B.var
-  DIVC  = 0b00_00_10_01_00_10_01_00_00, // A.var / B.var                               ( round toward 0 )
-  EXPV  = 0b00_00_10_01_00_10_10_00_00, // A.var ^ B.var                               ( general power, round toward 0 )
+  CLMP  = 0b00_00_10_01_00_10_00_00_00, // clamp A.var to [ B.var, C.var ] range
+//XXXX  = 0b00_00_10_01_00_10_01_00_00,
+//XXXX  = 0b00_00_10_01_00_10_10_00_00,
 
-  AVG2  = 0b00_00_10_01_01_00_00_00_00, // AVERAGE( A.var, B.var )                     ( round toward 0 )
-  MIN2  = 0b00_00_10_01_01_00_01_00_00, // MIN( A.var, B.var )
-  MAX2  = 0b00_00_10_01_01_00_10_00_00, // MAX( A.var, B.var )
+//XXXX  = 0b00_00_10_01_01_00_00_00_00,
+//XXXX  = 0b00_00_10_01_01_00_01_00_00,
+//XXXX  = 0b00_00_10_01_01_00_10_00_00,
 
-  EXP2  = 0b00_00_10_01_01_01_00_00_00, // ( A.var + *B.var ) ^ 2                      ( square )
-  SRT2  = 0b00_00_10_01_01_01_01_00_00, // ( A.var + *B.var ) ^ 1/2                    ( square root, round toward 0 )
-  MOD2  = 0b00_00_10_01_01_01_10_00_00, // ( A.var + *B.var ) mod 2
+//XXXX  = 0b00_00_10_01_01_01_00_00_00,
+//XXXX  = 0b00_00_10_01_01_01_01_00_00,
+//XXXX  = 0b00_00_10_01_01_01_10_00_00,
 
-  EXP3  = 0b00_00_10_01_01_10_00_00_00, // ( A.var + *B.var ) ^ 3                      ( cube )
-  CRT3  = 0b00_00_10_01_01_10_01_00_00, // ( A.var + *B.var ) ^ 1/3                    ( cube root, round toward 0 )
-  MOD3  = 0b00_00_10_01_01_10_10_00_00, // ( A.var + *B.var ) mod 3
+//XXXX  = 0b00_00_10_01_01_10_00_00_00,
+//XXXX  = 0b00_00_10_01_01_10_01_00_00,
+//XXXX  = 0b00_00_10_01_01_10_10_00_00,
 
-  LOGV  = 0b00_00_10_01_10_00_00_00_00, // log_B( A.var )                              ( general log, round toward 0 )
-  RNDV  = 0b00_00_10_01_10_00_01_00_00, // round A.var to nearest multiple of B.var    ( round toward 0 )
-  ROOT  = 0b00_00_10_01_10_00_10_00_00, // A.var ^ ( 1 / B.var )                       ( Nth root, round toward 0 )
+//XXXX  = 0b00_00_10_01_10_00_00_00_00,
+//XXXX  = 0b00_00_10_01_10_00_01_00_00,
+//XXXX  = 0b00_00_10_01_10_00_10_00_00,
 
-  DIFF  = 0b00_00_10_01_10_01_00_00_00, // | A.var - B.var |                           ( absolute difference )
+//XXXX  = 0b00_00_10_01_10_01_00_00_00,
 //XXXX  = 0b00_00_10_01_10_01_01_00_00,
 //XXXX  = 0b00_00_10_01_10_01_10_00_00,
 
@@ -444,17 +528,18 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
 //XXXX  = 0b00_00_10_01_10_10_01_00_00,
 //XXXX  = 0b00_00_10_01_10_10_10_00_00,
 
-  // ALU 2 OPS          5T ( 4 args ) | A / B / C => D.adr + R_PREG
+  // VECTOR OPS         4T ( 3 args ) |
+  // NOTE : VXXX indicates a vectorized op
 
-  MEDI  = 0b00_00_10_10_00_00_00_00_00, // MEDIAN( A.var, B.var, C.var )
-  MADD  = 0b00_00_10_10_00_00_01_00_00, // ( A.var x B.var ) + C.var
-  AMUL  = 0b00_00_10_10_00_00_10_00_00, // ( A.var + B.var ) x C.var
+  VSET  = 0b00_00_10_10_00_00_00_00_00, // SETV( A,   B++ ) C.var times
+  VCPY  = 0b00_00_10_10_00_00_01_00_00, // COPY( A++, B++ ) C.var times
+  VSWP  = 0b00_00_10_10_00_00_10_00_00, // SWAP( A++, B++ ) C.var times
 
-  AVG3  = 0b00_00_10_10_00_01_00_00_00, // AVERAGE( A.var, B.var, C.var )               ( round toward 0 )
-  MIN3  = 0b00_00_10_10_00_01_01_00_00, // MIN( A.var, B.var, C.var )
-  MAX3  = 0b00_00_10_10_00_01_10_00_00, // MAX( A.var, B.var, C.var )
+  VPSH  = 0b00_00_10_10_00_01_00_00_00, // push C.var trytes from A.adr onto stack at B.stk
+  VPOP  = 0b00_00_10_10_00_01_01_00_00, // pop  C.var trytes from B.stk => starting at A.adr
+  VCLR  = 0b00_00_10_10_00_01_10_00_00, // zero C.var trytes in stack B.stk from A.adr
 
-  CLMP  = 0b00_00_10_10_00_10_00_00_00, // clamp A.var to [ B.var, C.var ] range
+//XXXX  = 0b00_00_10_10_00_10_00_00_00, // TODO : add more vectorised ops
 //XXXX  = 0b00_00_10_10_00_10_01_00_00,
 //XXXX  = 0b00_00_10_10_00_10_10_00_00,
 
@@ -481,16 +566,6 @@ pub const OpCode = enum( u18 ) // represents 9 Trits ( 1 Tryte )
 //XXXX  = 0b00_00_10_10_10_10_00_00_00,
 //XXXX  = 0b00_00_10_10_10_10_01_00_00,
 //XXXX  = 0b00_00_10_10_10_10_10_00_00,
-
-
-  // ========= ENUM SPECIFIC METHODS =========
-
-  pub inline fn getOpLen( opName : OpCode ) u18
-  {
-    _ = opName;
-
-    return 4; // TODO : replace with real values
-  }
 };
 
 
@@ -529,14 +604,6 @@ pub const opCodeMap = std.StaticStringMap( OpCode ).initComptime(
   .{ "STOR", .STOR },
   .{ "LOAD", .LOAD },
   .{ "STLD", .STLD },
-
-// VECTOR OPERATIONS
-  .{ "VSET", .VSET },
-  .{ "VCPY", .VCPY },
-  .{ "VSWP", .VSWP },
-  .{ "VPSH", .VPSH },
-  .{ "VPOP", .VPOP },
-  .{ "VCLR", .VCLR },
 
 // TRITWISE OPERATIONS
   .{ "TSUM", .TSUM },
@@ -599,11 +666,11 @@ pub const opCodeMap = std.StaticStringMap( OpCode ).initComptime(
   .{ "SUBB", .SUBB },
   .{ "MODC", .MODC },
   .{ "MULV", .MULV },
-  .{ "DIVC", .DIVC },
+  .{ "DIVV", .DIVV },
   .{ "EXPV", .EXPV },
-  .{ "AVG2", .AVG2 },
-  .{ "MIN2", .MIN2 },
-  .{ "MAX2", .MAX2 },
+  .{ "AVGV", .AVGV },
+  .{ "MINV", .MINV },
+  .{ "MAXV", .MAXV },
   .{ "EXP2", .EXP2 },
   .{ "SRT2", .SRT2 },
   .{ "MOD2", .MOD2 },
@@ -623,4 +690,11 @@ pub const opCodeMap = std.StaticStringMap( OpCode ).initComptime(
   .{ "MAX3", .MAX3 },
   .{ "CLMP", .CLMP },
 
+// VECTOR OPERATIONS
+  .{ "VSET", .VSET },
+  .{ "VCPY", .VCPY },
+  .{ "VSWP", .VSWP },
+  .{ "VPSH", .VPSH },
+  .{ "VPOP", .VPOP },
+  .{ "VCLR", .VCLR },
 });

@@ -20,18 +20,21 @@ pub const TritChar = u8;
 pub const TryteStr = [ TRITS_PER_TRYTE ]u8;
 
 
-pub const T2 : Trit = 0b10;
-pub const T0 : Trit = 0b00;
-pub const T1 : Trit = 0b01;
+pub const T1 : Trit = 0b01; // 1
+pub const T0 : Trit = 0b00; // 0
+pub const T2 : Trit = 0b10; // 2
 
-pub const tPos  : Trit = 0b01;
-pub const tZero : Trit = 0b00;
-pub const tNeg  : Trit = 0b10;
+pub const tPos  : Trit = 0b01; // +
+pub const tZero : Trit = 0b00; // 0
+pub const tNeg  : Trit = 0b10; // -
 
-pub const tTrue  : Trit = 0b01;
-pub const tMaybe : Trit = 0b00;
-pub const tFalse : Trit = 0b10;
+pub const tTrue  : Trit = 0b01; // T
+pub const tMaybe : Trit = 0b00; // M
+pub const tFalse : Trit = 0b10; // F
 
+
+// NOTE : Using balanced ternary, so all numerical values are signed by default
+// NOTE : Sign of a tryte is determined by the sign of its MSD
 
 // =========================== TRIT-TRYTE CONVERSION ===========================
 
