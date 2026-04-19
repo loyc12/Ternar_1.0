@@ -306,7 +306,7 @@ pub const Ternar = struct
 
   inline fn stepProcess( self : *Ternar, lastOpLen : Tryte ) void
   {
-    const newAdr = self.nudgeProcRegTryte( .PADR, lastOpLen );
+    const newAdr = self.nudgeProcRegTryte( .R_PADR, lastOpLen );
 
     def.log( .DEBUG, 0, @src(), "Stepped process address to {s}: ", .{ tryteToStr( newAdr )});
   }

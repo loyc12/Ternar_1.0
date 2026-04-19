@@ -66,7 +66,7 @@ const Ternar    = def.Ternar;
 //  pub fn INFO( ternar : Ternar, A : Tryte ) void {}
 //  pub fn PRNT( ternar : Ternar, A : Tryte ) void {}
 
-//  pub fn SYST( ternar : Ternar, A : Tryte ) void {}
+//  pub fn SYSC( ternar : Ternar, A : Tryte ) void {}
 //  pub fn SAVE( ternar : Ternar, A : Tryte ) void {}
 //  pub fn RSTR( ternar : Ternar, A : Tryte ) void {}
 
