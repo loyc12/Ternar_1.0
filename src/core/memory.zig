@@ -48,7 +48,7 @@ const PAGE_TRYTE_SIZE : u64 = 19_683;
 const BANK_TRYTE_SIZE : u64 = 27 * PAGE_TRYTE_SIZE; // CAREFUL NOT TO OVERDO IT HERE
 const BANK_BYTE_SIZE  : u64 = @divFloor( BITS_PER_TRIT * TRITS_PER_TRYTE * BANK_TRYTE_SIZE, BITS_PER_BYTE ) + 1;
 
-pub inline fn isTritValid( trit : Trit ) bool { return ( trit != 0b00 ); }
+pub inline fn isTritValid( trit : Trit ) bool { return ( trit != 0b11 ); }
 
 pub inline fn isTritIndexValid(  index : usize ) bool { return ( index < BANK_TRYTE_SIZE * TRITS_PER_TRYTE ); }
 pub inline fn isTryteIndexValid( index : usize ) bool { return ( index < BANK_TRYTE_SIZE                   ); }

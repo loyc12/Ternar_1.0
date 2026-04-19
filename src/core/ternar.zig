@@ -51,9 +51,13 @@ const PRegTryte = def.PRegTryte;
 const PFlagTrit = def.PFlagTrit;
 
 
+// TODO : review name and implementation of "nudge" functions
+// TODO : use trit/tryte aritmetic functions in tryte.zig for all maths
+
 pub const Ternar = struct
 {
   RAM : MemBank = .{},
+
 
   // =========================== ACCESSORS AND MUTATORS ===========================
 
@@ -148,7 +152,7 @@ pub const Ternar = struct
 
   inline fn getTryteFromRam( self : *Ternar, register : Tryte ) Tryte
   {
-    return self.RAM.getTryte( @intFromEnum( register )) catch
+    return self.RAM.getTryte( @intCast( register )) catch
     {
       def.qlog( .ERROR, 0, @src(), "failed to get RAM tryte");
       return 0;
@@ -157,7 +161,7 @@ pub const Ternar = struct
 
   inline fn setTryteFromRam( self : *Ternar, register : Tryte, val : Tryte ) Tryte
   {
-    self.RAM.setTryte( @intFromEnum( register ), val ) catch
+    self.RAM.setTryte( @intCast( register ), val ) catch
     {
       def.qlog( .ERROR, 0, @src(), "failed to set RAM tryte");
       return 0;
@@ -168,7 +172,7 @@ pub const Ternar = struct
 
   inline fn nudgeTryteFromRam( self : *Ternar, register : Tryte, delta : Tryte ) Tryte
   {
-    var newVal = self.RAM.getTryte( @intFromEnum( register )) catch
+    var newVal = self.RAM.getTryte( @intCast( register )) catch
     {
       def.qlog( .ERROR, 0, @src(), "failed to get RAM tryte");
       return 0;
@@ -176,7 +180,7 @@ pub const Ternar = struct
 
     newVal += delta;
 
-    self.RAM.setTryte( @intFromEnum( register ), newVal ) catch
+    self.RAM.setTryte( @intCast( register ), newVal ) catch
     {
       def.qlog( .ERROR, 0, @src(), "failed to set RAM tryte");
       return 0;
@@ -187,7 +191,7 @@ pub const Ternar = struct
 
   inline fn maskTryteFromRam( self : *Ternar, register : Tryte, mask : Tryte ) Tryte
   {
-    var newVal = self.RAM.getTryte( @intFromEnum( register )) catch
+    var newVal = self.RAM.getTryte( @intCast( register )) catch
     {
       def.qlog( .ERROR, 0, @src(), "failed to get RAM tryte");
       return 0;
@@ -195,7 +199,7 @@ pub const Ternar = struct
 
     newVal &= mask;
 
-    self.RAM.setTryte( @intFromEnum( register ), newVal ) catch
+    self.RAM.setTryte( @intCast( register ), newVal ) catch
     {
       def.qlog( .ERROR, 0, @src(), "failed to set RAM tryte");
       return 0;
@@ -267,28 +271,26 @@ pub const Ternar = struct
     if( !foundNull ){ if( arg3 )| arg |{ argC += 1; C = arg; } else { foundNull = true; }}
     if( !foundNull ){ if( arg4 )| arg |{ argC += 1; D = arg; } else { foundNull = true; }}
 
-  //const OPT = ( op | OpCode._OPT_ );
-    const expectArgC = argC; // TODO : use OPT to find expected argcount
+    const expectedOpLen = argC + 1;
 
-    if( expectArgC != argC  )
+    const OPN = ( op & OpCode._OPN_ );
+    const opLen = OpCode.getOpLen( @enumFromInt( OPN ));
+
+    if( expectedOpLen != opLen  )
     {
-      def.log( .ERROR, 0, @src(), "expect {d} args, got {d} instead", .{ expectArgC, argC });
+      def.log( .ERROR, 0, @src(), "found {d} args for a {d} args op", .{ expectedOpLen - 1, opLen - 1 });
       return false;
     }
 
-    _ = self.setProcRegTryte( .OLEN, argC + 1 );
-
     // PARSING OPNAMES
-
-    const OPN = ( op & OpCode._OPN_ );
 
     switch( OPN )
     {
     // SYSTEM OPS      2T ( 1 arg ) |
 
-      @intFromEnum( OpCode.NOP ) => { ops.NOP( self, A ); },
-    //@intFromEnum( OpCode.INF ) => { ops.INF( self, A ); },
-    //@intFromEnum( OpCode.PRT ) => { ops.PRT( self, A ); },
+      @intFromEnum( OpCode.NOPE ) => { ops.NOPE( self, A ); },
+    //@intFromEnum( OpCode.INFO ) => { ops.INFO( self, A ); },
+    //@intFromEnum( OpCode.PRNT ) => { ops.PRNT( self, A ); },
 
 
       else => return false,
@@ -296,16 +298,15 @@ pub const Ternar = struct
 
     // STEPPING TO NEXT OP
 
-    self.stepProcess();
+    self.stepProcess( opLen );
 
     return true;
   }
 
 
-  inline fn stepProcess( self : *Ternar ) void
+  inline fn stepProcess( self : *Ternar, lastOpLen : Tryte ) void
   {
-    const opLenght = self.getProcRegTryte( .OLEN );
-    const newAdr = self.nudgeProcRegTryte( .PADR, opLenght );
+    const newAdr = self.nudgeProcRegTryte( .PADR, lastOpLen );
 
     def.log( .DEBUG, 0, @src(), "Stepped process address to {s}: ", .{ tryteToStr( newAdr )});
   }

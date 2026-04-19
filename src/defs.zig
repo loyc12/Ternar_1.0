@@ -43,11 +43,11 @@ pub const MemBank = mem_c.MemBank;
 // ================ OPCODE SHORTHANDS ================
 
 pub const opc_c = @import( "core/opcodes.zig" );
-pub const OpCode    = opc_c.e_OpCode;
+pub const OpCode    = opc_c.OpCode;
 pub const opCodeMap = opc_c.opCodeMap;
 
-pub const PFlagTrit = opc_c.e_PFlagTrit;
-pub const PRegTryte = opc_c.e_PRegTryte;
+pub const PFlagTrit = opc_c.PFlagTrit;
+pub const PRegTryte = opc_c.PRegTryte;
 
 
 // ================ TERNAR SHORTHANDS ================

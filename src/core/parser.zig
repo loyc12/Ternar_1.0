@@ -1,14 +1,6 @@
 const std = @import( "std" );
 const def = @import( "defs" );
 
-var isFileInit : bool = false;
-var readBuffer : [ 1024 ]u8 = undefined;
-var fileReader : std.fs.File.Reader = undefined;
-
-var file : std.fs.File = undefined;
-var line : ?[]u8 = null;
-var eof  : bool = false;
-var row  : u32 = 0;
 
 const OpCode = def.OpCode;
 const Tryte  = def.Tryte;
@@ -22,166 +14,183 @@ pub const ArgLine = struct
   D  : ?Tryte  = null,
 };
 
-const LINE_DELIMITER = ';';
-const ARG_DELIMITERS = "\t\r\n ,;.:(){}[]#/|\\";
+const LINE_DELIMITER = '\n';
+const ARG_DELIMITERS = "\t\r ,;.:(){}[]#/|\\";
 const COMMENT_DELIMITER = '#';
 
-// ================================ FILE PARSER FUNCTIONS ================================
-
-pub fn openFile( comptime filePath : [:0] const u8 ) void
+pub const Parser = struct
 {
-  if( isFileInit )
+  isFileInit : bool               = false,
+  readBuffer : [ 1024 ]u8         = undefined,
+  fileReader : std.fs.File.Reader = undefined,
+
+  file : std.fs.File = undefined,
+  line : ?[]u8       = null,
+  eof  : bool        = false,
+  row  : u32         = 0,
+
+  // ================================ FILE PARSER FUNCTIONS ================================
+
+  pub fn openFile( self : *Parser, comptime filePath : [:0] const u8 ) void
   {
-    def.qlog( .WARN, 0, @src(), "Closing previous file beforehand" );
-    file.close();
+    if( self.isFileInit )
+    {
+      def.qlog( .WARN, 0, @src(), "Closing previous file beforehand" );
+      self.file.close();
+    }
+
+    if( std.fs.cwd().openFile( filePath, .{} ))| f |{ self.file = f; }
+    else | err |
+    {
+      def.log( .ERROR, 0, @src(), "Failed to open file '{s}' : {}", .{ filePath, err });
+      self.isFileInit = false;
+      return;
+    }
+
+    self.fileReader = self.file.reader( &self.readBuffer );
+    self.isFileInit = true;
+
+    self.eof = false;
+    self.row = 0;
   }
 
-  if( std.fs.cwd().openFile( filePath, .{} ))| f |{ file = f; }
-  else | err |
+  pub fn closeFile( self : *Parser ) void
   {
-    def.log( .ERROR, 0, @src(), "Failed to open file '{s}' : {}", .{ filePath, err });
-    isFileInit = false;
-    return;
+    if( !self.isFileInit )
+    {
+      def.qlog( .WARN, 0, @src(), "Cannot close file : none opened yet");
+      return;
+    }
+
+    self.isFileInit = false;
+    self.file.close();
   }
 
-  fileReader = file.reader( &readBuffer );
-  row = 0;
-
-  isFileInit = true;
-}
-
-pub fn closeFile() void
-{
-  if( !isFileInit )
+  pub fn loadNextLine( self : *Parser ) bool
   {
-    def.qlog( .WARN, 0, @src(), "Cannot close file : none opened yet");
-    return;
+    if( !self.isFileInit )
+    {
+      def.qlog( .WARN, 0, @src(), "Cannot read line : none opened yet");
+      return false;
+    }
+
+    if( self.fileReader.interface.takeDelimiter( LINE_DELIMITER ))| l |{ self.line = l; }
+    else | err |
+    {
+      def.log( .ERROR, 0, @src(), "Failed to read file line : {}", .{ err });
+      return false;
+    }
+
+    if( !self.eof )
+    {
+      self.row += 1;
+      self.eof = ( self.line == null );
+    }
+
+    return true;
   }
 
-  file.close();
-  isFileInit = false;
-}
 
-pub fn loadNextLine() bool
-{
-  if( !isFileInit )
+  pub fn parseNextLine( self : *Parser ) ArgLine
   {
-    def.qlog( .WARN, 0, @src(), "Cannot read line : none opened yet");
-    return false;
-  }
+    if( !self.loadNextLine() )
+    {
+      def.qlog( .ERROR, 0, @src(), "Failed to obtain parsable line : load error");
+      return .{};
+    }
 
-  if( fileReader.interface.takeDelimiter( LINE_DELIMITER ))| l |{ line = l; }
-  else | err |
-  {
-    def.log( .ERROR, 0, @src(), "Failed to read file line : {}", .{ err });
-    return false;
-  }
+    if( self.eof )
+    {
+      def.qlog( .ERROR, 0, @src(), "Failed to obtain parsable line : end of file");
+      return .{};
+    }
 
-  eof = ( line == null );
-  if( !eof ){ row += 1; }
+    const codeLine = std.mem.sliceTo( self.line.?, COMMENT_DELIMITER );
+    var it = std.mem.tokenizeAny( u8, codeLine, ARG_DELIMITERS );
+    var tokenIndex : u32 = 0;
 
-  return true;
-}
+    while( it.next() )| token |
+    {
+      if( tokenIndex == 0 )
+      {
+        const opCode = def.opCodeMap.get( token );
+        if( opCode != null )
+        {
+          std.debug.print("\n-L{d}-\t: {s}\n", .{ self.row, @tagName( opCode.? )}); // TODO : build return struct
+        }
+      }
+      else
+      {
+        const arg : ?u18 = std.fmt.parseInt( u18, token, 3 ) catch null;
 
+        if( arg != null )
+        {
+          std.debug.print(" A{d}\t: {}\n", .{ tokenIndex, arg.? }); // TODO : build return struct
+        }
 
-pub fn parseNextLine() ArgLine
-{
-  if( !loadNextLine() )
-  {
-    def.qlog( .ERROR, 0, @src(), "Failed to obtain parsable line : load error");
+      }
+      tokenIndex += 1;
+    }
+
     return .{};
   }
 
-  if( eof )
+  // ================================ DEBUG FUNCTIONS ================================
+
+  fn logNextLine( self : *Parser ) void
   {
-    def.qlog( .ERROR, 0, @src(), "Failed to obtain parsable line : end of file");
-    return .{};
+    if( !self.loadNextLine() ){ return; }
+
+    if( !self.eof ){ def.log(  .INFO, self.row, @src(), "[{s}]", .{ self.line.? }); }
+    else           { def.qlog( .WARN, self.row, @src(), "EOF reached"          ); }
   }
+};
 
-  const codeLine = std.mem.sliceTo( line.?, COMMENT_DELIMITER );
-  var it = std.mem.tokenizeAny( u8, codeLine, ARG_DELIMITERS );
-  var tokenIndex : u32 = 0;
-
-  while( it.next() )| token |
-  {
-    if( tokenIndex == 0 )
-    {
-      const opCode = def.opCodeMap.get( token );
-      if( opCode != null )
-      {
-        std.debug.print("{s}\n", .{ @tagName( opCode.? )});
-      }
-    }
-    else
-    {
-      const arg : ?u18 = std.fmt.parseInt( u18, token, 2 ) catch null;
-
-      if( arg != null )
-      {
-        std.debug.print("{}\n", .{ arg.? });
-      }
-
-    }
-    tokenIndex += 1;
-  }
-
-  return .{};
-}
-
-
-
-// ================================ DEBUG FUNCTIONS ================================
-
-fn logNextLine() void
-{
-  if( !loadNextLine() ){ return; }
-
-  if( !eof ){ def.log(  .INFO, row, @src(), "{s}", .{ line.? }); }
-  else      { def.qlog( .WARN, row, @src(), "EOF reached"     ); }
-}
 
 pub fn testParser() void
 {
   def.qlog( .DEBUG, 0, @src(), "TESTING PARSER\n");
 
-  closeFile();
+  var p : Parser = .{};
 
-  logNextLine();
+  p.closeFile();
 
-  openFile( "BAD_PATH" );
-  logNextLine();
-  closeFile();
+  p.logNextLine();
 
-  openFile( "BAD_PATH" );
-  openFile( "exampleAssemblies/debug.trn" );
-  logNextLine();
-  closeFile();
-  closeFile();
+  p.openFile( "BAD_PATH" );
+  p.logNextLine();
+  p.closeFile();
 
-  openFile( "exampleAssemblies/debug.trn" );
-  openFile( "BAD_PATH" );
-  logNextLine();
-  closeFile();
+  p.openFile( "BAD_PATH" );
+  p.openFile( "exampleAssemblies/debug.trn" );
+  p.logNextLine();
+  p.closeFile();
+  p.closeFile();
 
-  logNextLine();
+  p.openFile( "exampleAssemblies/debug.trn" );
+  p.openFile( "BAD_PATH" );
+  p.logNextLine();
+  p.closeFile();
 
-  openFile( "exampleAssemblies/debug.trn" );
+  p.logNextLine();
 
-  logNextLine();
-  logNextLine();
-  logNextLine();
-  logNextLine();
-  logNextLine();
+  p.openFile( "exampleAssemblies/debug.trn" );
 
-  openFile( "exampleAssemblies/debug.trn" );
+  p.logNextLine();
+  p.logNextLine();
+  p.logNextLine();
+  p.logNextLine();
+  p.logNextLine();
 
-  _ = parseNextLine();
-  _ = parseNextLine();
-  _ = parseNextLine();
-  _ = parseNextLine();
-  _ = parseNextLine();
+  p.openFile( "exampleAssemblies/debug.trn" );
 
-  closeFile();
+  _ = p.parseNextLine();
+  _ = p.parseNextLine();
+  _ = p.parseNextLine();
+  _ = p.parseNextLine();
+  _ = p.parseNextLine();
+
+  p.closeFile();
 
   def.qlog( .DEBUG, 0, @src(), "PARSER TESTED\n");
 }

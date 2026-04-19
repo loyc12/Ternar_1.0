@@ -57,54 +57,54 @@ const Ternar    = def.Ternar;
 
 // SYSTEM OPS          2T ( 1 arg ) |
 
-  pub fn NOP( ternar : *Ternar, A : Tryte ) void
+  pub fn NOPE( ternar : *Ternar, A : Tryte ) void
   {
     _ = ternar;
     _ = A;      // TODO : handle A as a multiplier
   }
 
-//  pub fn INF( ternar : Ternar, A : Tryte ) void {}
-//  pub fn PRT( ternar : Ternar, A : Tryte ) void {}
+//  pub fn INFO( ternar : Ternar, A : Tryte ) void {}
+//  pub fn PRNT( ternar : Ternar, A : Tryte ) void {}
 
-//  pub fn SYS( ternar : Ternar, A : Tryte ) void {}
-//  pub fn SAV( ternar : Ternar, A : Tryte ) void {}
-//  pub fn RST( ternar : Ternar, A : Tryte ) void {}
+//  pub fn SYST( ternar : Ternar, A : Tryte ) void {}
+//  pub fn SAVE( ternar : Ternar, A : Tryte ) void {}
+//  pub fn RSTR( ternar : Ternar, A : Tryte ) void {}
 
-//  pub fn CNT( ternar : Ternar ) void {}
-//  pub fn TRM( ternar : Ternar ) void {}
-//  pub fn YLD( ternar : Ternar ) void {}
+//  pub fn CONT( ternar : Ternar ) void {}
+//  pub fn TERM( ternar : Ternar ) void {}
+//  pub fn YILD( ternar : Ternar ) void {}
 
 // PROCESS OPS           2T ( 1 arg ) |
 
-//  pub fn SSA( ternar : Ternar, A : Tryte ) void {}
-//  pub fn SRA( ternar : Ternar, A : Tryte ) void {}
+//  pub fn SPTR( ternar : Ternar, A : Tryte ) void {}
+//  pub fn SSEG( ternar : Ternar, A : Tryte ) void {}
 
-//  pub fn JMP( ternar : Ternar, A : Tryte ) void {}
-//  pub fn CAL( ternar : Ternar, A : Tryte ) void {}
-//  pub fn RET( ternar : Ternar, A : Tryte ) void {}
+//  pub fn JUMP( ternar : Ternar, A : Tryte ) void {}
+//  pub fn CALL( ternar : Ternar, A : Tryte ) void {}
+//  pub fn RTRN( ternar : Ternar, A : Tryte ) void {}
 
-//  pub fn PSS( ternar : Ternar, A : Tryte ) void {}
-//  pub fn PPS( ternar : Ternar, A : Tryte ) void {}
-//  pub fn CLS( ternar : Ternar, A : Tryte ) void {}
+//  pub fn PSHS( ternar : Ternar, A : Tryte ) void {}
+//  pub fn POPS( ternar : Ternar, A : Tryte ) void {}
+//  pub fn CLRS( ternar : Ternar, A : Tryte ) void {}
 
 // MOVE OPS           3T ( 2 args ) | in place ops
 
-//  pub fn CPY( ternar : Ternar, A : Tryte, B : Tryte ) void {}
-//  pub fn SWP( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn COPY( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn SWAP( ternar : Ternar, A : Tryte, B : Tryte ) void {}
 
-//  pub fn STR( ternar : Ternar, A : Tryte, B : Tryte ) void {}
-//  pub fn LOD( ternar : Ternar, A : Tryte, B : Tryte ) void {}
-//  pub fn STL( ternar : Ternar, A : Tryte, B : Tryte ) void
+//  pub fn STOR( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn LOAD( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn STLD( ternar : Ternar, A : Tryte, B : Tryte ) void
 //  {
-//    STR( ternar, A, null );
-//    LOD( ternar, B, null );
+//    STOR( ternar, A, null );
+//    LOAD( ternar, B, null );
 //  }
 
 // MULTI OPS          4T ( 3 args ) |
 
-//  pub fn STM( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
-//  pub fn CPM( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
-//  pub fn SWM( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn VSET( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn VCPY( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn VSWP( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 
 //  pub fn PSH( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 //  pub fn POP( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
@@ -113,22 +113,22 @@ const Ternar    = def.Ternar;
 // GATE OPS          3T ( 2 args ) | outputs to PREG only
 
 //  pub fn AND( ternar : Ternar, A : Tryte, B : Tryte ) void {}
-//  pub fn NAN( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TNMN( ternar : Ternar, A : Tryte, B : Tryte ) void {}
 
-//  pub fn ORR( ternar : Ternar, A : Tryte, B : Tryte ) void {}
-//  pub fn NOR( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TMAX( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TNMX( ternar : Ternar, A : Tryte, B : Tryte ) void {}
 
-//  pub fn XOR( ternar : Ternar, A : Tryte, B : Tryte ) void {}
-//  pub fn XNR( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TDIS( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TAGR( ternar : Ternar, A : Tryte, B : Tryte ) void {}
 
-//  pub fn MAJ( ternar : Ternar, A : Tryte, B : Tryte ) void {}
-//  pub fn IMJ( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TMAJ( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TNMJ( ternar : Ternar, A : Tryte, B : Tryte ) void {}
 
-//  pub fn CON( ternar : Ternar, A : Tryte, B : Tryte ) void {}
-//  pub fn ICN( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TCON( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TNCN( ternar : Ternar, A : Tryte, B : Tryte ) void {}
 
-//  pub fn PAR( ternar : Ternar, A : Tryte, B : Tryte ) void {}
-//  pub fn NPR( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TEQL( ternar : Ternar, A : Tryte, B : Tryte ) void {}
+//  pub fn TNEQ( ternar : Ternar, A : Tryte, B : Tryte ) void {}
 
 // TRIT1 OPS           2T ( 1 arg ) | in place ops.
 
@@ -162,17 +162,17 @@ const Ternar    = def.Ternar;
 //  pub fn DET( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 //  pub fn IDT( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 
-//  pub fn CMZ( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn CMPZ( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 
 // TRIT2 OPS          4T ( 3 args ) | outputs to C.adr
 
-//  pub fn CMF( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
-//  pub fn CMP( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn CMPF( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn CMPR( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 //  pub fn CMN( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 
-//  pub fn MSZ( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
-//  pub fn MSP( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
-//  pub fn MSN( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn MSKZ( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn MSKP( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn MSKN( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 
 // ALU1 OPS           4T ( 3 args ) | outputs to C.adr
 
@@ -185,12 +185,12 @@ const Ternar    = def.Ternar;
 //  pub fn LOG( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 
 //  pub fn DIV( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
-//  pub fn RND( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
-//  pub fn RUT( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn ROND( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn ROOT( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 
 //  pub fn AVG( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 //  pub fn MAX( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
-//  pub fn MIN( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
+//  pub fn TMIN( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 
 //  pub fn ADC( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}
 //  pub fn SBB( ternar : Ternar, A : Tryte, B : Tryte, C : Tryte ) void {}

@@ -6,7 +6,7 @@ pub const Bit  = u1;
 pub const Byte = u8;
 pub const BITS_PER_BYTE = 8;
 
-pub const Trit  = u2;  // 01 = +, 11 = 0, 10 = -, 00 = . ( invalid )
+pub const Trit  = u2;  // 01 = +, 00 = 0, 10 = -, 11 = . ( invalid / only for tritmasking by emulator itself )
 pub const BITS_PER_TRIT = 2; // MUST divide 8 fully
 
 pub const Tryte = u18; // aka 9 trits
@@ -53,9 +53,9 @@ pub inline fn tritToChar( trit : Trit ) u8
 {
   return switch( trit )
   {
-    0b10 => '2',
-    0b00 => '0',
     0b01 => '1',
+    0b00 => '0',
+    0b10 => '2',
     0b11 => '.',
   };
 }
@@ -105,3 +105,24 @@ pub inline fn strToTryte( s : TryteStr ) !Tryte
   }
   return tryte;
 }
+
+
+
+// =========================== TRITWISE OPERATIONS ===========================
+
+// TODO : tritAnd, tritOr, tritXor, TridNor, tritNand, etc
+
+
+// =========================== TRYTEWISE OPERATIONS ===========================
+
+// TODO : tryteAnd, tryteOr, tryteXor, TridNor, tryteNand, etc
+
+
+// =========================== TRIT ARITHMETICS ===========================
+
+// TODO : tritAdd, tritSub, tritMod, TridMul, tritDiv, etc
+
+
+// =========================== TRYTE ARITHMETICS ===========================
+
+// TODO : tryteAdd, tryteSub, tryteMod, TridMul, tryteDiv, etc
